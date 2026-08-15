@@ -1,10 +1,10 @@
 /* ==========================================================================
-   DAILY EXPENSES TRACKER - MAIN APP CONTROLLER (TOP-UP & WALLET ENGINE)
+   DAILY EXPENSES TRACKER - MAIN APP CONTROLLER (CLEAN ROUTING & ISOLATED ADMIN)
    ========================================================================== */
 
 class AppController {
   constructor() {
-    this.currentRole = 'student'; // 'student' | 'guardian' | 'admin'
+    this.currentRole = 'student'; // 'student' | 'guardian'
     this.currentView = 'home';
     this.selectedCategoryFilter = 'all';
     this.searchQuery = '';
@@ -16,11 +16,27 @@ class AppController {
     this.loadTheme();
     this.checkAuthUI();
     
-    const auth = dataManager.getAuthUser();
-    if (auth && auth.isLoggedIn) {
-      this.switchView('dashboard');
+    // URL Route Check (Direct #admin or /admin access)
+    window.addEventListener('hashchange', () => this.checkURLRoute());
+    this.checkURLRoute();
+  }
+
+  checkURLRoute() {
+    const hash = window.location.hash;
+    const path = window.location.pathname;
+    const search = window.location.search;
+
+    if (hash === '#admin' || path.endsWith('/admin') || search.includes('admin')) {
+      this.switchView('admin');
     } else {
-      this.switchView('home');
+      const auth = dataManager.getAuthUser();
+      if (auth && auth.isLoggedIn && this.currentView === 'home') {
+        this.switchView('dashboard');
+      } else if (!auth || !auth.isLoggedIn) {
+        if (this.currentView !== 'auth' && this.currentView !== 'admin') {
+          this.switchView('home');
+        }
+      }
     }
   }
 
@@ -90,6 +106,7 @@ class AppController {
 
   logout() {
     dataManager.setAuthUser({ isLoggedIn: false, email: '', name: '' });
+    window.location.hash = '';
     this.checkAuthUI();
     this.showToast('Logged out successfully.', 'info');
     this.switchView('home');
@@ -135,17 +152,21 @@ class AppController {
 
   switchView(viewName) {
     const auth = dataManager.getAuthUser();
-    if (viewName !== 'home' && viewName !== 'auth' && (!auth || !auth.isLoggedIn)) {
+    
+    // Auth Guard: Require login for Dashboard, Records, Analytics, Share
+    if (viewName !== 'home' && viewName !== 'auth' && viewName !== 'admin' && (!auth || !auth.isLoggedIn)) {
       this.showToast('Please login to access the Student Dashboard.', 'info');
       viewName = 'auth';
     }
 
     this.currentView = viewName;
 
+    // Update active navbar button
     document.querySelectorAll('.nav-btn, .mobile-nav-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.view === viewName);
     });
 
+    // Hide all view sections
     document.querySelectorAll('.view-section').forEach(sec => {
       sec.classList.remove('active');
     });
@@ -413,7 +434,7 @@ class AppController {
         <div style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
           <i class="fas fa-receipt" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.4;"></i>
           <p style="font-size: 0.9rem; font-weight: 600;">No transactions recorded yet.</p>
-          <p style="font-size: 0.8rem;">Click "Add Money / Top Up" to deposit money into your bKash, Nagad, Bank, or Cash wallet!</p>
+          <p style="font-size: 0.8rem;">Click "Add Money" to deposit money into your bKash, Nagad, Bank, or Cash wallet!</p>
         </div>
       `;
       return;
@@ -685,6 +706,7 @@ class AppController {
     `;
   }
 
+  // Secret Isolated Admin Panel (Triggered ONLY via #admin or /admin URL)
   renderAdminPanel() {
     const container = document.getElementById('adminPanelContainer');
     if (!container) return;
@@ -696,9 +718,14 @@ class AppController {
     container.innerHTML = `
       <div class="card-panel">
         <div class="panel-header">
-          <div class="panel-title"><i class="fas fa-user-cog"></i> System Administration Control</div>
-          <span class="tag-method" style="background: var(--primary-bg); color: var(--primary);">Admin Restricted</span>
+          <div class="panel-title" style="color: var(--danger);"><i class="fas fa-user-shield"></i> System Administration Control Panel</div>
+          <span class="tag-method" style="background: rgba(226, 19, 110, 0.15); color: var(--primary); font-weight: 700;">Secret Route: /admin</span>
         </div>
+
+        <div style="background: var(--bg-input); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; font-size: 0.88rem; border-left: 4px solid var(--primary);">
+          <strong>Admin Isolation Notice:</strong> This section is completely hidden from the main menu and student view. It is accessible only when navigating to <code>#admin</code> or <code>/admin</code> in the browser URL bar.
+        </div>
+
         <div class="wallets-grid" style="margin-bottom: 1.5rem;">
           <div class="card-panel" style="padding: 1.2rem; margin-bottom: 0;">
             <div class="metric-title">System Transactions</div>
@@ -713,9 +740,15 @@ class AppController {
             <div class="metric-value">${links.length}</div>
           </div>
         </div>
-        <button class="btn btn-secondary" style="color: var(--danger); border-color: var(--danger);" onclick="appController.resetAllAppData()">
-          <i class="fas fa-trash-alt"></i> Reset System Data to Clean Slate (৳0)
-        </button>
+
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <button class="btn btn-secondary" style="color: var(--danger); border-color: var(--danger);" onclick="appController.resetAllAppData()">
+            <i class="fas fa-trash-alt"></i> Reset System Data to Clean Slate (৳0)
+          </button>
+          <button class="btn btn-primary" onclick="window.location.hash=''; appController.switchView('dashboard');">
+            <i class="fas fa-arrow-left"></i> Exit Admin & Return to Dashboard
+          </button>
+        </div>
       </div>
     `;
   }
