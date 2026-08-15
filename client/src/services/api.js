@@ -26,4 +26,20 @@ API.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Response interceptor to handle session expiration (401)
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      if (localStorage.getItem('expenses_user')) {
+        localStorage.removeItem('expenses_user');
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+          window.location.href = '/login';
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default API;

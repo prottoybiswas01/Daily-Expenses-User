@@ -29,4 +29,6 @@ const savingsGoalSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+savingsGoalSchema.index({ userId: 1 });
+
 module.exports = mongoose.model('SavingsGoal', savingsGoalSchema);

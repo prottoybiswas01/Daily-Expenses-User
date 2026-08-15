@@ -285,3 +285,19 @@ body {
     padding: 1rem 1rem 3rem 1rem;
   }
 }
+
+@media (max-width: 640px) {
+  .grid-2, .grid-3, .grid-4 {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .modal-container {
+    padding: 1.25rem;
+    max-width: 95%;
+  }
+
+  .btn-mobile-full {
+    width: 100%;
+  }
+}
