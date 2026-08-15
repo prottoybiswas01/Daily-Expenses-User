@@ -1,5 +1,5 @@
 /* ==========================================================================
-   DAILY EXPENSES TRACKER - DATA MANAGER & WALLET SYSTEM
+   DAILY EXPENSES TRACKER - DATA MANAGER & WALLET SYSTEM (CLEAN SLATE VERSION)
    ========================================================================== */
 
 const STORAGE_KEYS = {
@@ -11,11 +11,12 @@ const STORAGE_KEYS = {
   AUTH_USER: 'daily_expenses_auth_user'
 };
 
-const DEFAULT_WALLETS = {
-  bkash: { id: 'bkash', name: 'bKash (বিকাশ)', balance: 4500, icon: 'fa-mobile-alt', color: '#e2136e' },
-  nagad: { id: 'nagad', name: 'Nagad (নগদ)', balance: 2200, icon: 'fa-wallet', color: '#f7921e' },
-  bank: { id: 'bank', name: 'Bank Account (ব্যাংক)', balance: 8500, icon: 'fa-university', color: '#2563eb' },
-  cash: { id: 'cash', name: 'Cash in Hand (নগদ ক্যাশ)', balance: 1800, icon: 'fa-money-bill-wave', color: '#10b981' }
+// Initial Clean State: 0 Balance for all Wallets
+const CLEAN_WALLETS = {
+  bkash: { id: 'bkash', name: 'bKash (বিকাশ)', balance: 0, icon: 'fa-mobile-alt', color: '#e2136e' },
+  nagad: { id: 'nagad', name: 'Nagad (নগদ)', balance: 0, icon: 'fa-wallet', color: '#f7921e' },
+  bank: { id: 'bank', name: 'Bank Account (ব্যাংক)', balance: 0, icon: 'fa-university', color: '#2563eb' },
+  cash: { id: 'cash', name: 'Cash in Hand (নগদ ক্যাশ)', balance: 0, icon: 'fa-money-bill-wave', color: '#10b981' }
 };
 
 const DEFAULT_CATEGORIES = [
@@ -30,89 +31,34 @@ const DEFAULT_CATEGORIES = [
   { id: 'cat_tuition_income', name: 'Tutoring / Freelance (টিউশনি/ফ্রিল্যান্সিং)', type: 'income', icon: 'fa-laptop-code', color: '#3b82f6' }
 ];
 
-const SEED_TRANSACTIONS = [
-  {
-    id: 'tx_101',
-    title: 'Monthly Hostel Mess Rent (মেস ভাড়া)',
-    amount: 5500,
-    type: 'expense',
-    category: 'cat_hostel',
-    walletId: 'bkash',
-    date: '2026-08-01',
-    method: 'bKash',
-    note: 'Paid mess rent & utility bill via bKash',
-    flagged: false
-  },
-  {
-    id: 'tx_102',
-    title: 'Family Monthly Allowance (বাসার টাকা)',
-    amount: 12000,
-    type: 'income',
-    category: 'cat_allowance',
-    walletId: 'bank',
-    date: '2026-08-02',
-    method: 'Bank Transfer',
-    note: 'Father deposited monthly allowance to Bank',
-    flagged: false
-  },
-  {
-    id: 'tx_103',
-    title: 'University Semester Exam Fee (ফরম ফিলাপ)',
-    amount: 2800,
-    type: 'expense',
-    category: 'cat_tuition',
-    walletId: 'nagad',
-    date: '2026-08-04',
-    method: 'Nagad',
-    note: 'Semester exam fee paid via Nagad',
-    flagged: false
-  },
-  {
-    id: 'tx_104',
-    title: 'Bus Fare & Rickshaw (রিকশা/বাস ভাড়া)',
-    amount: 120,
-    type: 'expense',
-    category: 'cat_transit',
-    walletId: 'cash',
-    date: '2026-08-05',
-    method: 'Cash',
-    note: 'Campus commute cash',
-    flagged: false
-  },
-  {
-    id: 'tx_105',
-    title: 'Private Tuition Income (টিউশনি বেতন)',
-    amount: 4500,
-    type: 'income',
-    category: 'cat_tuition_income',
-    walletId: 'bkash',
-    date: '2026-08-10',
-    method: 'bKash',
-    note: 'Received tutoring payment in bKash',
-    flagged: false
-  }
-];
-
 class DataManager {
   constructor() {
     this.init();
   }
 
   init() {
+    // Clear legacy seed demo data if present
+    const isCleaned = localStorage.getItem('daily_expenses_clean_slate_v2');
+    if (!isCleaned) {
+      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.WALLETS, JSON.stringify(CLEAN_WALLETS));
+      localStorage.setItem('daily_expenses_clean_slate_v2', 'true');
+    }
+
     if (!localStorage.getItem(STORAGE_KEYS.TRANSACTIONS)) {
-      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(SEED_TRANSACTIONS));
+      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify([]));
     }
     if (!localStorage.getItem(STORAGE_KEYS.WALLETS)) {
-      localStorage.setItem(STORAGE_KEYS.WALLETS, JSON.stringify(DEFAULT_WALLETS));
+      localStorage.setItem(STORAGE_KEYS.WALLETS, JSON.stringify(CLEAN_WALLETS));
     }
     if (!localStorage.getItem(STORAGE_KEYS.CATEGORIES)) {
       localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(DEFAULT_CATEGORIES));
     }
     if (!localStorage.getItem(STORAGE_KEYS.USER_SETTINGS)) {
       const defaultSettings = {
-        currency: 'BDT',
+        currency: '৳',
         currencySymbol: '৳',
-        theme: 'dark',
+        theme: 'light',
         monthlyBudget: 15000,
         userName: 'Tanvir Hossain',
         userEmail: 'tanvir.cs@university.edu'
@@ -124,8 +70,16 @@ class DataManager {
     }
   }
 
+  // Reset all transactions & wallet balances to 0 (Clean Slate)
+  clearAllData() {
+    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.WALLETS, JSON.stringify(CLEAN_WALLETS));
+    localStorage.setItem(STORAGE_KEYS.SHARED_ACCESS, JSON.stringify([]));
+    return true;
+  }
+
   getWallets() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.WALLETS)) || DEFAULT_WALLETS;
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.WALLETS)) || CLEAN_WALLETS;
   }
 
   saveWallets(wallets) {
@@ -287,7 +241,7 @@ class DataManager {
 
     const settings = this.getSettings();
     const budget = settings.monthlyBudget || 15000;
-    const budgetUsedPercent = Math.min(Math.round((totalExpense / budget) * 100), 100);
+    const budgetUsedPercent = budget > 0 ? Math.min(Math.round((totalExpense / budget) * 100), 100) : 0;
 
     return {
       totalIncome,

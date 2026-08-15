@@ -63,6 +63,15 @@ class AppController {
     this.showToast(`Switched to ${nextTheme === 'dark' ? 'Dark Velvet' : 'Light Luxe'} mode`, 'info');
   }
 
+  // Clear / Reset all data to 0 clean slate
+  resetAllAppData() {
+    if (confirm('Are you sure you want to clear all data and reset wallet balances to ৳0?')) {
+      dataManager.clearAllData();
+      this.showToast('All transaction records & wallet balances cleared to ৳0!', 'success');
+      this.renderCurrentView();
+    }
+  }
+
   switchRole(role) {
     this.currentRole = role;
     document.querySelectorAll('.role-pill').forEach(pill => {
@@ -142,7 +151,7 @@ class AppController {
         <div class="wallet-vibrant-bottom">
           <span style="font-size: 0.78rem; opacity: 0.9;">Mobile Wallet</span>
           <button class="wallet-action-pill" onclick="appController.openAddModalWithWallet('bkash')">
-            <i class="fas fa-plus-circle"></i> Pay / Top Up
+            <i class="fas fa-plus-circle"></i> Pay / Deposit
           </button>
         </div>
       </div>
@@ -156,7 +165,7 @@ class AppController {
         <div class="wallet-vibrant-bottom">
           <span style="font-size: 0.78rem; opacity: 0.9;">Digital Cash</span>
           <button class="wallet-action-pill" onclick="appController.openAddModalWithWallet('nagad')">
-            <i class="fas fa-plus-circle"></i> Pay / Send
+            <i class="fas fa-plus-circle"></i> Pay / Deposit
           </button>
         </div>
       </div>
@@ -170,7 +179,7 @@ class AppController {
         <div class="wallet-vibrant-bottom">
           <span style="font-size: 0.78rem; opacity: 0.9;">Savings Account</span>
           <button class="wallet-action-pill" onclick="appController.openAddModalWithWallet('bank')">
-            <i class="fas fa-university"></i> Transfer
+            <i class="fas fa-university"></i> Transfer / Deposit
           </button>
         </div>
       </div>
@@ -248,7 +257,12 @@ class AppController {
     const expenses = transactions.filter(t => t.type === 'expense').slice(0, 10).reverse();
 
     if (expenses.length === 0) {
-      container.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--text-muted);">No spending data recorded.</div>`;
+      container.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+          <i class="fas fa-chart-line" style="font-size: 1.8rem; opacity: 0.4; margin-bottom: 0.4rem;"></i>
+          <p style="font-size: 0.88rem;">No spending recorded yet. Start by logging an income or expense!</p>
+        </div>
+      `;
       return;
     }
 
@@ -330,8 +344,9 @@ class AppController {
     if (transactions.length === 0) {
       container.innerHTML = `
         <div style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
-          <i class="fas fa-receipt" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;"></i>
-          <p>No transaction records found.</p>
+          <i class="fas fa-receipt" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.4;"></i>
+          <p style="font-size: 0.9rem; font-weight: 600;">No transactions recorded yet.</p>
+          <p style="font-size: 0.8rem;">Click "Log Expense" or "Add Income" to start tracking.</p>
         </div>
       `;
       return;
@@ -585,6 +600,9 @@ class AppController {
             <div class="metric-value">${links.length}</div>
           </div>
         </div>
+        <button class="btn btn-secondary" style="color: var(--danger); border-color: var(--danger);" onclick="appController.resetAllAppData()">
+          <i class="fas fa-trash-alt"></i> Reset All App Data to Clean Slate (৳0)
+        </button>
       </div>
     `;
   }
