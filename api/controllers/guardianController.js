@@ -8,6 +8,7 @@ const connectDB = require('../config/db');
 // Read key safely from environment variables (prevents GitHub Push Protection secret scanning error)
 const resendApiKey = process.env.RESEND_API_KEY;
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
+const senderEmail = process.env.SENDER_EMAIL || 'onboarding@resend.dev';
 
 // Helper to dynamically derive base client URL under any custom domain / hosting setup
 const getClientBaseUrl = (req) => {
@@ -118,8 +119,6 @@ exports.generateSharedLink = async (req, res) => {
     });
 
     const user = await User.findById(req.user._id);
-
-    // Build the public guardian viewer link URL using dynamic origin detection (custom domain safe)
     const baseUrl = getClientBaseUrl(req);
     const guardianLink = `${baseUrl}/guardian-view/${accessCode}`;
 
@@ -128,19 +127,27 @@ exports.generateSharedLink = async (req, res) => {
 
     if (resend) {
       try {
-        await resend.emails.send({
-          from: 'onboarding@resend.dev',
+        const { data, error } = await resend.emails.send({
+          from: senderEmail,
           to: recipientEmail,
           subject: `[Guardian Observer] Financial Statement Access from ${user.name}`,
           html: buildGuardianEmailHtml(recipientName, user.name, user.email, accessCode, guardianLink)
         });
-        emailSent = true;
+
+        if (error) {
+          console.error('[Resend Email Response Error]:', error);
+          emailError = error.message || JSON.stringify(error);
+        } else {
+          console.log('[Resend Email Sent Success]:', data);
+          emailSent = true;
+        }
       } catch (e) {
-        console.error('[Resend Email Send Error]:', e);
+        console.error('[Resend Email Send Catch Exception]:', e);
         emailError = e.message;
       }
     } else {
       console.warn('[Resend]: RESEND_API_KEY environment variable is not configured');
+      emailError = 'RESEND_API_KEY environment variable is missing on Vercel backend.';
     }
 
     res.status(201).json({
@@ -173,16 +180,21 @@ exports.resendSharedLink = async (req, res) => {
     const baseUrl = getClientBaseUrl(req);
     const guardianLink = `${baseUrl}/guardian-view/${link.accessCode}`;
 
-    await resend.emails.send({
-      from: 'onboarding@resend.dev',
+    const { data, error } = await resend.emails.send({
+      from: senderEmail,
       to: link.recipientEmail,
       subject: `[Guardian Observer] Financial Statement Access from ${user.name}`,
       html: buildGuardianEmailHtml(link.recipientName, user.name, user.email, link.accessCode, guardianLink)
     });
 
+    if (error) {
+      console.error('[resendSharedLink error]:', error);
+      return res.status(400).json({ success: false, message: `Resend API Error: ${error.message}` });
+    }
+
     res.json({ success: true, message: `Observer link email re-sent successfully to ${link.recipientEmail}` });
   } catch (error) {
-    console.error('[resendSharedLink error]:', error);
+    console.error('[resendSharedLink exception]:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

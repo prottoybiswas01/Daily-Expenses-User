@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { generateSharedLinkApi, resendSharedLinkApi, getSharedLinksApi, revokeSharedLinkApi } from '../services/guardianService';
-import { X, ShieldCheck, Copy, Check, Trash2, Mail, Send } from 'lucide-react';
+import { X, ShieldCheck, Copy, Check, Trash2, Mail, Send, AlertTriangle } from 'lucide-react';
 
 const GuardianModal = ({ isOpen, onClose }) => {
   const [recipientName, setRecipientName] = useState('');
@@ -47,7 +47,15 @@ const GuardianModal = ({ isOpen, onClose }) => {
       if (res.success) {
         setRecipientName('');
         setRecipientEmail('');
-        setSuccessMsg(`Access code generated & email sent via Resend to ${recipientEmail}!`);
+        
+        if (res.emailError) {
+          setError(res.emailError);
+        } else if (res.emailSent) {
+          setSuccessMsg(`Access link created & invitation email sent via Resend to ${recipientEmail}!`);
+        } else {
+          setSuccessMsg(`Access code generated for ${recipientEmail}.`);
+        }
+
         await fetchLinks();
       } else {
         setError(res.message || 'Failed to generate link');
@@ -113,8 +121,9 @@ const GuardianModal = ({ isOpen, onClose }) => {
         </div>
 
         {error && (
-          <div style={{ background: 'rgba(244, 63, 94, 0.15)', border: '1px solid rgba(244, 63, 94, 0.3)', color: 'var(--rose)', padding: '0.75rem', borderRadius: 'var(--radius-md)', fontSize: '0.85rem', marginBottom: '1rem' }}>
-            {error}
+          <div style={{ background: 'rgba(244, 63, 94, 0.15)', border: '1px solid rgba(244, 63, 94, 0.3)', color: 'var(--rose)', padding: '0.75rem', borderRadius: 'var(--radius-md)', fontSize: '0.85rem', marginBottom: '1rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+            <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
+            <div>{error}</div>
           </div>
         )}
 
