@@ -150,6 +150,7 @@ exports.demoLogin = async (req, res) => {
 // @route   GET /api/auth/me
 exports.getMe = async (req, res) => {
   try {
+    await connectDB();
     res.json({
       success: true,
       user: req.user

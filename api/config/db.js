@@ -1,5 +1,8 @@
 const mongoose = require('mongoose');
 
+// Disable Mongoose buffering so operations fail fast if DB connection fails
+mongoose.set('bufferCommands', false);
+
 let cachedConnection = null;
 
 const connectDB = async () => {
@@ -11,14 +14,15 @@ const connectDB = async () => {
 
   try {
     const conn = await mongoose.connect(mongoURI, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
     });
     cachedConnection = conn;
-    console.log(`[MongoDB] Connected successfully: ${conn.connection.host}`);
+    console.log(`[MongoDB] Connected successfully to ${conn.connection.host}`);
     return conn;
   } catch (error) {
     console.error(`[MongoDB] Connection error: ${error.message}`);
-    throw error;
+    throw new Error(`Database connection failed: ${error.message}. Please check Network Access (0.0.0.0/0) in MongoDB Atlas Dashboard.`);
   }
 };
 
