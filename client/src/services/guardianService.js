@@ -5,6 +5,11 @@ export const generateSharedLinkApi = async (data) => {
   return response.data;
 };
 
+export const resendSharedLinkApi = async (id) => {
+  const response = await API.post(`/guardian/resend/${id}`);
+  return response.data;
+};
+
 export const getSharedLinksApi = async () => {
   const response = await API.get('/guardian/links');
   return response.data;
