@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { generateSharedLinkApi, resendSharedLinkApi, getSharedLinksApi, revokeSharedLinkApi } from '../services/guardianService';
-import { X, ShieldCheck, Copy, Check, Trash2, Mail, Send, AlertTriangle } from 'lucide-react';
+import { X, ShieldCheck, Copy, Check, Trash2, Mail, Send, AlertTriangle, ExternalLink, Share2 } from 'lucide-react';
 
 const GuardianModal = ({ isOpen, onClose }) => {
   const [recipientName, setRecipientName] = useState('');
@@ -9,7 +9,9 @@ const GuardianModal = ({ isOpen, onClose }) => {
   const [submitting, setSubmitting] = useState(false);
   const [resendingId, setResendingId] = useState(null);
   const [copiedCode, setCopiedCode] = useState(null);
+  const [newlyCreatedLink, setNewlyCreatedLink] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
+  const [emailNotice, setEmailNotice] = useState('');
   const [error, setError] = useState('');
 
   const fetchLinks = async () => {
@@ -25,7 +27,9 @@ const GuardianModal = ({ isOpen, onClose }) => {
     if (isOpen) {
       fetchLinks();
       setSuccessMsg('');
+      setEmailNotice('');
       setError('');
+      setNewlyCreatedLink(null);
     }
   }, [isOpen]);
 
@@ -35,6 +39,8 @@ const GuardianModal = ({ isOpen, onClose }) => {
     e.preventDefault();
     setError('');
     setSuccessMsg('');
+    setEmailNotice('');
+    setNewlyCreatedLink(null);
 
     if (!recipientName || !recipientEmail) {
       setError('Please provide parent/guardian name and email');
@@ -48,12 +54,18 @@ const GuardianModal = ({ isOpen, onClose }) => {
         setRecipientName('');
         setRecipientEmail('');
         
-        if (res.emailError) {
-          setError(res.emailError);
-        } else if (res.emailSent) {
-          setSuccessMsg(`Access link created & invitation email sent via Resend to ${recipientEmail}!`);
+        const generatedUrl = res.guardianLink || `${window.location.origin}/guardian-view/${res.data?.accessCode}`;
+        setNewlyCreatedLink({
+          url: generatedUrl,
+          code: res.data?.accessCode,
+          name: res.data?.recipientName || recipientName
+        });
+
+        if (res.emailSent) {
+          setSuccessMsg(`✅ Access link created and email sent successfully to ${recipientEmail}!`);
         } else {
-          setSuccessMsg(`Access code generated for ${recipientEmail}.`);
+          setSuccessMsg(`✅ Observer Access Link Created Successfully!`);
+          setEmailNotice(res.emailError || 'Email delivery notification: You can copy and share the link directly below via WhatsApp or SMS.');
         }
 
         await fetchLinks();
@@ -71,15 +83,16 @@ const GuardianModal = ({ isOpen, onClose }) => {
     setResendingId(id);
     setError('');
     setSuccessMsg('');
+    setEmailNotice('');
     try {
       const res = await resendSharedLinkApi(id);
       if (res.success) {
-        setSuccessMsg(`Resend email sent successfully to ${email}!`);
+        setSuccessMsg(`Invitation email sent successfully to ${email}!`);
       } else {
-        setError(res.message || 'Failed to resend email');
+        setEmailNotice(res.message || 'Email delivery pending. You can use the Copy Link button to share directly.');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Error resending access email');
+      setEmailNotice(err.response?.data?.message || 'Email service notice. Use Copy Link to share directly.');
     } finally {
       setResendingId(null);
     }
@@ -89,7 +102,8 @@ const GuardianModal = ({ isOpen, onClose }) => {
     try {
       const res = await revokeSharedLinkApi(id);
       if (res.success) {
-        setSuccessMsg('Access link revoked successfully');
+        setSuccessMsg('Access link revoked and permanently deleted');
+        setNewlyCreatedLink(null);
         fetchLinks();
       }
     } catch (err) {
@@ -97,22 +111,26 @@ const GuardianModal = ({ isOpen, onClose }) => {
     }
   };
 
-  const copyToClipboard = (accessCode) => {
-    const fullUrl = `${window.location.origin}/guardian-view/${accessCode}`;
+  const copyToClipboard = (accessCode, customUrl) => {
+    const fullUrl = customUrl || `${window.location.origin}/guardian-view/${accessCode}`;
     navigator.clipboard.writeText(fullUrl);
-    setCopiedCode(accessCode);
+    setCopiedCode(accessCode || 'new');
     setTimeout(() => setCopiedCode(null), 2500);
   };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-container" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+        
+        {/* Modal Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <ShieldCheck color="var(--emerald)" size={24} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <ShieldCheck color="var(--emerald)" size={26} />
             <div>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Guardian Observer Access</h3>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Send automated Resend email invitation links to your parents or guardian</p>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>Guardian Observer Access</h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Share live read-only financial summary with your parents or guardian
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="btn btn-secondary" style={{ padding: '0.4rem' }}>
@@ -120,6 +138,7 @@ const GuardianModal = ({ isOpen, onClose }) => {
           </button>
         </div>
 
+        {/* Error Banner */}
         {error && (
           <div style={{ background: 'rgba(244, 63, 94, 0.15)', border: '1px solid rgba(244, 63, 94, 0.3)', color: 'var(--rose)', padding: '0.75rem', borderRadius: 'var(--radius-md)', fontSize: '0.85rem', marginBottom: '1rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
             <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
@@ -127,15 +146,45 @@ const GuardianModal = ({ isOpen, onClose }) => {
           </div>
         )}
 
+        {/* Success Card with Copy & WhatsApp share */}
         {successMsg && (
-          <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', color: 'var(--emerald)', padding: '0.75rem', borderRadius: 'var(--radius-md)', fontSize: '0.85rem', marginBottom: '1rem' }}>
-            {successMsg}
+          <div style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem' }}>
+            <div style={{ color: 'var(--emerald)', fontWeight: 700, fontSize: '0.92rem', marginBottom: newlyCreatedLink ? '0.5rem' : 0 }}>
+              {successMsg}
+            </div>
+
+            {newlyCreatedLink && (
+              <div style={{ marginTop: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Direct Observer URL for <strong>{newlyCreatedLink.name}</strong>:
+                </div>
+                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-sm)', fontSize: '0.82rem', fontFamily: 'monospace', wordBreak: 'break-all', color: 'var(--primary-glow)', border: '1px solid var(--border-color)' }}>
+                  {newlyCreatedLink.url}
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                  <button onClick={() => copyToClipboard(newlyCreatedLink.code, newlyCreatedLink.url)} className="btn btn-primary" style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    {copiedCode === newlyCreatedLink.code || copiedCode === 'new' ? <Check size={14} /> : <Copy size={14} />}
+                    {copiedCode === newlyCreatedLink.code || copiedCode === 'new' ? 'Copied to Clipboard!' : 'Copy Observer Link'}
+                  </button>
+                  <a href={`https://wa.me/?text=${encodeURIComponent(`Assalamu Alaikum. Here is my live student financial statement link: ${newlyCreatedLink.url}`)}`} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#25D366', borderColor: 'rgba(37, 211, 102, 0.3)' }}>
+                    <Share2 size={14} /> Share on WhatsApp
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {emailNotice && (
+              <div style={{ marginTop: '0.6rem', fontSize: '0.78rem', color: 'var(--amber)', background: 'rgba(245, 158, 11, 0.1)', padding: '0.5rem', borderRadius: 'var(--radius-sm)' }}>
+                {emailNotice}
+              </div>
+            )}
           </div>
         )}
 
-        <form onSubmit={handleGenerate} style={{ marginBottom: '1.5rem', background: 'rgba(0,0,0,0.15)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+        {/* Generate Link Form */}
+        <form onSubmit={handleGenerate} style={{ marginBottom: '1.5rem', background: 'rgba(0,0,0,0.18)', padding: '1.1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
           <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--emerald)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <Mail size={16} /> + Generate New Link & Send Resend Email
+            <Mail size={16} /> Create Guardian Observer Link
           </h4>
           <div className="grid-2" style={{ gap: '0.75rem' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
@@ -146,10 +195,11 @@ const GuardianModal = ({ isOpen, onClose }) => {
             </div>
           </div>
           <button type="submit" disabled={submitting} className="btn btn-success" style={{ width: '100%', marginTop: '0.75rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-            <Send size={15} /> {submitting ? 'Generating & Sending Email...' : 'Generate & Send Resend Email'}
+            <Send size={15} /> {submitting ? 'Creating Observer Link...' : 'Generate & Send Guardian Link'}
           </button>
         </form>
 
+        {/* Access Links List */}
         <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.75rem' }}>Active & Past Guardian Access Links</h4>
         <div style={{ maxHeight: '220px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {links.length === 0 ? (
@@ -165,17 +215,17 @@ const GuardianModal = ({ isOpen, onClose }) => {
                 </div>
                 <div style={{ display: 'flex', gap: '0.35rem' }}>
                   {link.status === 'Active' && (
-                    <button onClick={() => handleResend(link._id, link.recipientEmail)} disabled={resendingId === link._id} className="btn btn-secondary" style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }} title="Resend email via Resend">
+                    <button onClick={() => copyToClipboard(link.accessCode)} className="btn btn-primary" style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      {copiedCode === link.accessCode ? <Check size={13} color="#ffffff" /> : <Copy size={13} />} Copy Link
+                    </button>
+                  )}
+                  {link.status === 'Active' && (
+                    <button onClick={() => handleResend(link._id, link.recipientEmail)} disabled={resendingId === link._id} className="btn btn-secondary" style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }} title="Resend Email">
                       <Mail size={13} color="var(--primary)" /> {resendingId === link._id ? 'Sending...' : 'Resend Email'}
                     </button>
                   )}
                   {link.status === 'Active' && (
-                    <button onClick={() => copyToClipboard(link.accessCode)} className="btn btn-secondary" style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                      {copiedCode === link.accessCode ? <Check size={13} color="var(--emerald)" /> : <Copy size={13} />} Link
-                    </button>
-                  )}
-                  {link.status === 'Active' && (
-                    <button onClick={() => handleRevoke(link._id)} className="btn btn-danger" style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }} title="Revoke access">
+                    <button onClick={() => handleRevoke(link._id)} className="btn btn-danger" style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem' }} title="Delete link">
                       <Trash2 size={13} />
                     </button>
                   )}
