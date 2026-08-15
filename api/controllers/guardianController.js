@@ -270,7 +270,7 @@ exports.getSharedLinks = async (req, res) => {
   }
 };
 
-// @desc    Revoke shared link
+// @desc    Revoke & Permanently delete shared link from Mongo Atlas
 // @route   DELETE /api/guardian/links/:id
 exports.revokeSharedLink = async (req, res) => {
   try {
@@ -279,9 +279,9 @@ exports.revokeSharedLink = async (req, res) => {
     if (!link) {
       return res.status(404).json({ success: false, message: 'Shared link not found' });
     }
-    link.status = 'Revoked';
-    await link.save();
-    res.json({ success: true, message: 'Access revoked successfully' });
+    // Permanent deletion to optimize MongoDB Atlas storage & performance
+    await link.deleteOne();
+    res.json({ success: true, message: 'Access link permanently deleted from MongoDB' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

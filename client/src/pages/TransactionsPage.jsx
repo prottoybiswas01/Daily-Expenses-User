@@ -41,36 +41,137 @@ const TransactionsPage = () => {
     setFilters(prev => ({ ...prev, type: e.target.value }));
   };
 
-  // PDF Export statement generator
+  // Ultra-Premium PDF Statement generator with separated tables (Income & Expenses)
   const exportPDFStatement = () => {
     const doc = new jsPDF();
+
+    const incomeTxs = transactions.filter(t => t.type === 'income');
+    const expenseTxs = transactions.filter(t => t.type === 'expense');
+
+    const totalIncome = incomeTxs.reduce((acc, curr) => acc + curr.amount, 0);
+    const totalExpense = expenseTxs.reduce((acc, curr) => acc + curr.amount, 0);
+    const netBalance = totalIncome - totalExpense;
+
+    // Header Header Banner
+    doc.setFillColor(15, 23, 42); // Dark slate banner
+    doc.rect(0, 0, 210, 36, 'F');
+
     doc.setFontSize(18);
-    doc.setTextColor(99, 102, 241);
-    doc.text('Daily Expenses & Student Budget Statement', 14, 20);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Daily Expenses & Student Financial Statement', 14, 18);
 
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Student Name: ${user?.name || 'Student'}`, 14, 28);
-    doc.text(`Generated Date: ${new Date().toLocaleDateString()}`, 14, 34);
+    doc.setFontSize(9);
+    doc.setTextColor(148, 163, 184);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Student: ${user?.name || 'Student'} (${user?.email || 'N/A'})`, 14, 26);
+    doc.text(`Report Date: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`, 14, 31);
 
-    const tableRows = transactions.map((t, idx) => [
-      idx + 1,
-      t.date,
-      t.title,
-      t.walletId.toUpperCase(),
-      t.type === 'income' ? 'Income' : 'Expense',
-      `BDT ${t.amount.toLocaleString()}`
-    ]);
+    let startY = 44;
+
+    // Part 1: Financial Overview Summary Box
+    doc.setFontSize(11);
+    doc.setTextColor(30, 41, 59);
+    doc.setFont('helvetica', 'bold');
+    doc.text('1. Executive Financial Summary', 14, startY);
+    startY += 4;
 
     doc.autoTable({
-      head: [['#', 'Date', 'Title / Description', 'Wallet', 'Type', 'Amount (BDT)']],
-      body: tableRows,
-      startY: 42,
+      head: [['Total Allowance / Income', 'Total Student Expenses', 'Net Balance']],
+      body: [[
+        `+ BDT ${totalIncome.toLocaleString()}`,
+        `- BDT ${totalExpense.toLocaleString()}`,
+        `BDT ${netBalance.toLocaleString()}`
+      ]],
+      startY: startY,
       theme: 'grid',
-      headStyles: { fillColor: [99, 102, 241] }
+      headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+      bodyStyles: { fontSize: 11, fontStyle: 'bold', halign: 'center' }
     });
 
-    doc.save(`Expenses_Statement_${user?.name || 'Student'}_${new Date().toISOString().split('T')[0]}.pdf`);
+    startY = doc.lastAutoTable.finalY + 10;
+
+    // Part 2: Income Transactions Table (Green / Emerald Styled)
+    doc.setFontSize(11);
+    doc.setTextColor(16, 185, 129);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`2. Income & Allowance Log (${incomeTxs.length} Records)`, 14, startY);
+    startY += 4;
+
+    if (incomeTxs.length === 0) {
+      doc.setFontSize(9);
+      doc.setTextColor(100);
+      doc.setFont('helvetica', 'normal');
+      doc.text('No income transactions logged in this period.', 14, startY + 4);
+      startY += 12;
+    } else {
+      const incomeRows = incomeTxs.map((t, idx) => [
+        idx + 1,
+        t.date,
+        t.title,
+        t.walletId.toUpperCase(),
+        `+ BDT ${t.amount.toLocaleString()}`
+      ]);
+
+      doc.autoTable({
+        head: [['#', 'Date', 'Source / Description', 'Wallet', 'Amount']],
+        body: incomeRows,
+        startY: startY,
+        theme: 'striped',
+        headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255] },
+        columnStyles: { 4: { halign: 'right', fontStyle: 'bold' } }
+      });
+      startY = doc.lastAutoTable.finalY + 10;
+    }
+
+    // Check page space for Expense Table
+    if (startY > 220) {
+      doc.addPage();
+      startY = 20;
+    }
+
+    // Part 3: Expense Transactions Table (Rose / Red Styled)
+    doc.setFontSize(11);
+    doc.setTextColor(225, 29, 72);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`3. Student Expense Log (${expenseTxs.length} Records)`, 14, startY);
+    startY += 4;
+
+    if (expenseTxs.length === 0) {
+      doc.setFontSize(9);
+      doc.setTextColor(100);
+      doc.setFont('helvetica', 'normal');
+      doc.text('No expense transactions logged in this period.', 14, startY + 4);
+    } else {
+      const expenseRows = expenseTxs.map((t, idx) => [
+        idx + 1,
+        t.date,
+        t.title,
+        t.walletId.toUpperCase(),
+        t.note || '-',
+        `- BDT ${t.amount.toLocaleString()}`
+      ]);
+
+      doc.autoTable({
+        head: [['#', 'Date', 'Expense Item', 'Wallet', 'Note', 'Amount']],
+        body: expenseRows,
+        startY: startY,
+        theme: 'striped',
+        headStyles: { fillColor: [225, 29, 72], textColor: [255, 255, 255] },
+        columnStyles: { 5: { halign: 'right', fontStyle: 'bold' } }
+      });
+    }
+
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(`Page ${i} of ${pageCount} • Daily Expenses Tracker Financial Audit`, 105, 290, { align: 'center' });
+    }
+
+    doc.save(`Financial_Statement_${user?.name || 'Student'}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (
@@ -85,8 +186,8 @@ const TransactionsPage = () => {
               Search, filter, and export your expense records
             </p>
           </div>
-          <button onClick={exportPDFStatement} className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>
-            <Download size={16} /> Export PDF Statement
+          <button onClick={exportPDFStatement} className="btn btn-secondary" style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Download size={16} color="var(--primary)" /> Export PDF Statement
           </button>
         </div>
 
