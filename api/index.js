@@ -11,8 +11,19 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Connect to MongoDB
-connectDB().catch(err => console.error('[Index] DB pre-connect warning:', err.message));
+// Ensure DB Connection on every Vercel request lifecycle
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('[DB Middleware Connection Error]:', err.message);
+    res.status(500).json({
+      success: false,
+      message: 'Database connection error. Please ensure MongoDB Atlas Network Access is set to Allow Access From Anywhere (0.0.0.0/0).'
+    });
+  }
+});
 
 // Register API Routes
 app.use('/api/auth', require('./routes/authRoutes'));
