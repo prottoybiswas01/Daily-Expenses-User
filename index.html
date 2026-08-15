@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="bn" data-theme="dark">
+<html lang="bn" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,7 +22,7 @@
         <i class="fas fa-wallet"></i>
         <div>
           <span>Daily Expenses</span>
-          <span class="brand-tag">Student & Wallets Edition</span>
+          <span class="brand-tag">Student Edition</span>
         </div>
       </div>
 
@@ -68,8 +68,8 @@
           <i class="fas fa-plus"></i> <span>Log Expense</span>
         </button>
 
-        <button class="icon-btn" id="themeToggleBtn" title="Toggle Theme">
-          <i class="fas fa-moon"></i>
+        <button class="icon-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme">
+          <i class="fas fa-sun"></i>
         </button>
 
         <button class="icon-btn" onclick="appController.switchView('auth')" title="Login / Profile">
@@ -144,16 +144,16 @@
     <!-- VIEW 1: DASHBOARD -->
     <section id="view-dashboard" class="view-section active">
       
-      <!-- Welcome Banner -->
-      <div class="dashboard-banner">
-        <div class="banner-welcome">
-          <h1>Welcome, Tanvir! 👋</h1>
-          <p>Real-time Student Budget, Wallets (bKash, Nagad, Bank, Cash) & Daily Expenses.</p>
+      <!-- Welcome Bar -->
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem;">
+        <div>
+          <h1 style="font-family: 'Outfit'; font-size: 1.6rem; font-weight: 700;">Dashboard</h1>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Hello Tanvir, here is your student financial summary & wallet balances.</p>
         </div>
-        <div class="currency-selector">
+        <div style="display: flex; align-items: center; gap: 0.5rem; background: var(--bg-card); padding: 0.4rem 0.8rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); font-size: 0.85rem;">
           <i class="fas fa-coins" style="color: var(--warning);"></i>
-          <span style="font-weight: 600; font-size: 0.85rem;">Currency:</span>
-          <select id="currencySelect" onchange="appController.currentCurrency = this.value; appController.renderCurrentView();">
+          <span style="font-weight: 600;">Currency:</span>
+          <select id="currencySelect" style="padding: 0.2rem 0.4rem; border: none; background: transparent; font-weight: 700; width: auto;" onchange="appController.currentCurrency = this.value; appController.renderCurrentView();">
             <option value="৳">BDT (৳ Taka)</option>
             <option value="$">USD ($ Dollar)</option>
           </select>
@@ -162,16 +162,16 @@
 
       <!-- WALLET BALANCES SECTION (bKash, Nagad, Bank, Cash) -->
       <div class="wallets-section-title">
-        <span><i class="fas fa-wallet" style="color: var(--primary);"></i> My Wallets & Accounts (এক্সেস ওয়ালেট ব্যালেন্স)</span>
-        <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="appController.openTransferModal()">
-          <i class="fas fa-exchange-alt"></i> Transfer Between Wallets
+        <span><i class="fas fa-wallet" style="color: var(--primary);"></i> My Accounts & Wallets</span>
+        <button class="btn btn-secondary" style="padding: 0.4rem 0.85rem; font-size: 0.8rem;" onclick="appController.openTransferModal()">
+          <i class="fas fa-exchange-alt"></i> Transfer Funds
         </button>
       </div>
 
       <div id="walletsGridContainer" class="wallets-grid"></div>
 
-      <!-- FINANCIAL OVERVIEW CARDS -->
-      <div class="metrics-grid" style="margin-bottom: 1.8rem;">
+      <!-- OVERVIEW METRICS GRID -->
+      <div class="metrics-grid">
         <div class="metric-card">
           <div class="metric-header">
             <span class="metric-title">Total Monthly Income</span>
@@ -182,7 +182,7 @@
 
         <div class="metric-card">
           <div class="metric-header">
-            <span class="metric-title">Total Monthly Expenses</span>
+            <span class="metric-title">Total Monthly Expense</span>
             <div class="metric-icon expense"><i class="fas fa-arrow-up"></i></div>
           </div>
           <div class="metric-value" id="metricExpense">৳0</div>
@@ -190,7 +190,7 @@
 
         <div class="metric-card">
           <div class="metric-header">
-            <span class="metric-title">Total Net Liquidity</span>
+            <span class="metric-title">Net Liquidity Balance</span>
             <div class="metric-icon balance"><i class="fas fa-wallet"></i></div>
           </div>
           <div class="metric-value" id="metricBalance">৳0</div>
@@ -205,33 +205,81 @@
         </div>
       </div>
 
-      <!-- Content Split Grid -->
-      <div class="content-grid">
+      <!-- MAIN DASHBOARD GRID WITH QUICK ADD EXPENSE SIDEBAR -->
+      <div class="dashboard-grid-layout">
         
-        <!-- Left Side: Recent Transactions -->
-        <div class="card-panel">
-          <div class="panel-header">
-            <div class="panel-title"><i class="fas fa-history"></i> Recent Transactions</div>
-            <div style="display: flex; gap: 0.5rem;">
-              <button class="btn btn-success" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="appController.openAddModal('income')">
-                <i class="fas fa-plus-circle"></i> Add Income
-              </button>
-              <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="appController.switchView('transactions')">View All</button>
+        <!-- Left Main Column: Recent Transactions & Visual Spending Trend -->
+        <div>
+          <!-- Spending Trend Chart Card -->
+          <div class="card-panel">
+            <div class="panel-header">
+              <div class="panel-title"><i class="fas fa-chart-line"></i> Spending Trend Visualizer</div>
+              <span style="font-size: 0.8rem; color: var(--text-muted);">Recent Expenditure Curve</span>
             </div>
+            <div id="spendingTrendContainer"></div>
           </div>
 
-          <div class="filter-bar">
-            <div class="search-box">
-              <i class="fas fa-search"></i>
-              <input type="text" placeholder="Search (Bus, Hostel, bKash, Tea...)" oninput="appController.handleSearchInput(this.value)">
+          <!-- Recent Transactions Card -->
+          <div class="card-panel">
+            <div class="panel-header">
+              <div class="panel-title"><i class="fas fa-history"></i> Recent Transactions</div>
+              <div style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-success" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="appController.openAddModal('income')">
+                  <i class="fas fa-plus-circle"></i> Income
+                </button>
+                <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="appController.switchView('transactions')">View All</button>
+              </div>
             </div>
-          </div>
 
-          <div id="recentTxList" class="transaction-list"></div>
+            <div class="filter-bar">
+              <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search (Bus, Hostel, bKash, Tea...)" oninput="appController.handleSearchInput(this.value)">
+              </div>
+            </div>
+
+            <div id="recentTxList" class="transaction-list"></div>
+          </div>
         </div>
 
-        <!-- Right Side: Analytics Charts -->
+        <!-- Right Sidebar Column: Quick Add Expense Widget & Analytics Breakdown -->
         <div>
+          <!-- Quick Add Expense Form Widget -->
+          <div class="quick-add-card">
+            <div class="quick-add-title">
+              <i class="fas fa-bolt" style="color: var(--warning);"></i> Quick Log Expense
+            </div>
+            <form id="quickAddForm" onsubmit="appController.handleQuickAddExpense(event)">
+              <div class="form-group" style="margin-bottom: 0.75rem;">
+                <label>Description / Title</label>
+                <input type="text" id="quickTitleInput" placeholder="e.g. Lunch, Rickshaw, Tea..." required>
+              </div>
+              <div class="form-row" style="margin-bottom: 0.75rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label>Amount (৳)</label>
+                  <input type="number" id="quickAmountInput" placeholder="0" step="0.01" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label>Category</label>
+                  <select id="quickCatSelect" required></select>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label>Pay From Wallet</label>
+                <select id="quickWalletSelect" required>
+                  <option value="bkash">bKash (বিকাশ)</option>
+                  <option value="nagad">Nagad (নগদ)</option>
+                  <option value="bank">Bank (ব্যাংক)</option>
+                  <option value="cash" selected>Cash in Hand (ক্যাশ)</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary" style="width: 100%;">
+                <i class="fas fa-plus"></i> Deduct & Save Expense
+              </button>
+            </form>
+          </div>
+
+          <!-- Category Doughnut Breakdown -->
           <div class="card-panel">
             <div class="panel-header">
               <div class="panel-title"><i class="fas fa-chart-pie"></i> Expense Breakdown</div>
@@ -239,6 +287,7 @@
             <div id="doughnutChartContainer" class="chart-box"></div>
           </div>
 
+          <!-- Category Distribution Bars -->
           <div class="card-panel">
             <div class="panel-header">
               <div class="panel-title"><i class="fas fa-tasks"></i> Category Distribution</div>
@@ -362,7 +411,7 @@
               <option value="bkash">bKash (বিকাশ)</option>
               <option value="nagad">Nagad (নগদ)</option>
               <option value="bank">Bank (ব্যাংক)</option>
-              <option value="cash" selected>Cash (নগদ ক্যাশ)</option>
+              <option value="cash" selected>Cash in Hand (ক্যাশ)</option>
             </select>
           </div>
           <div class="form-group">
@@ -397,7 +446,7 @@
           <div class="form-group">
             <label>Transfer From (কোথা থেকে)</label>
             <select id="transferFromWallet" required>
-              <option value="bank">Bank (ব্যাংক)</option>
+              <option value="bank">Bank Account (ব্যাংক)</option>
               <option value="bkash">bKash (বিকাশ)</option>
               <option value="nagad">Nagad (নগদ)</option>
               <option value="cash">Cash (ক্যাশ)</option>
@@ -410,7 +459,7 @@
               <option value="cash">Cash in Hand (ক্যাশ)</option>
               <option value="bkash">bKash (বিকাশ)</option>
               <option value="nagad">Nagad (নগদ)</option>
-              <option value="bank">Bank (ব্যাংক)</option>
+              <option value="bank">Bank Account (ব্যাংক)</option>
             </select>
           </div>
         </div>

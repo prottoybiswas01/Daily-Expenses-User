@@ -19,7 +19,7 @@ class AppController {
   }
 
   setupEventListeners() {
-    // Top Nav buttons
+    // Nav buttons
     document.querySelectorAll('.nav-btn, .mobile-nav-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const targetView = btn.dataset.view;
@@ -51,16 +51,16 @@ class AppController {
 
   loadTheme() {
     const settings = dataManager.getSettings();
-    const theme = settings.theme || 'dark';
+    const theme = settings.theme || 'light';
     document.documentElement.setAttribute('data-theme', theme);
   }
 
   toggleTheme() {
-    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', nextTheme);
     dataManager.updateSettings({ theme: nextTheme });
-    this.showToast(`Theme switched to ${nextTheme} mode`, 'info');
+    this.showToast(`Switched to ${nextTheme === 'dark' ? 'Dark Velvet' : 'Light Luxe'} mode`, 'info');
   }
 
   switchRole(role) {
@@ -106,6 +106,8 @@ class AppController {
 
     if (this.currentView === 'dashboard') {
       this.renderTransactionList('recentTxList', transactions.slice(0, 6));
+      this.renderQuickAddCategories();
+      this.renderSpendingTrendChart(transactions);
       analyticsEngine.renderCategoryBars('categoryBarsContainer', transactions, categories, this.currentCurrency);
       analyticsEngine.renderCategoryDoughnut('doughnutChartContainer', transactions, categories, this.currentCurrency);
     } else if (this.currentView === 'transactions') {
@@ -122,7 +124,7 @@ class AppController {
     }
   }
 
-  // Render Wallet Balances (bKash, Nagad, Bank, Cash)
+  // Render Vibrant Wallet Cards (bKash, Nagad, Bank, Cash)
   renderWalletsSummary() {
     const container = document.getElementById('walletsGridContainer');
     if (!container) return;
@@ -131,56 +133,158 @@ class AppController {
     const sym = this.currentCurrency;
 
     const html = `
-      <div class="wallet-card bkash">
-        <div class="wallet-top">
-          <div class="wallet-name"><i class="fas fa-mobile-alt"></i> bKash (বিকাশ)</div>
-          <div class="wallet-icon"><i class="fas fa-wallet"></i></div>
+      <div class="wallet-card-vibrant bkash">
+        <div class="wallet-vibrant-top">
+          <div class="wallet-vibrant-name"><i class="fas fa-mobile-alt"></i> bKash (বিকাশ)</div>
+          <div class="wallet-vibrant-icon"><i class="fas fa-wallet"></i></div>
         </div>
-        <div class="wallet-balance">${sym}${wallets.bkash.balance.toLocaleString()}</div>
-        <div class="wallet-footer">
-          <span>Mobile Wallet</span>
-          <span>Active</span>
-        </div>
-      </div>
-
-      <div class="wallet-card nagad">
-        <div class="wallet-top">
-          <div class="wallet-name"><i class="fas fa-wallet"></i> Nagad (নগদ)</div>
-          <div class="wallet-icon"><i class="fas fa-paper-plane"></i></div>
-        </div>
-        <div class="wallet-balance">${sym}${wallets.nagad.balance.toLocaleString()}</div>
-        <div class="wallet-footer">
-          <span>Digital Cash</span>
-          <span>Active</span>
+        <div class="wallet-vibrant-balance">${sym}${wallets.bkash.balance.toLocaleString()}</div>
+        <div class="wallet-vibrant-bottom">
+          <span style="font-size: 0.78rem; opacity: 0.9;">Mobile Wallet</span>
+          <button class="wallet-action-pill" onclick="appController.openAddModalWithWallet('bkash')">
+            <i class="fas fa-plus-circle"></i> Pay / Top Up
+          </button>
         </div>
       </div>
 
-      <div class="wallet-card bank">
-        <div class="wallet-top">
-          <div class="wallet-name"><i class="fas fa-university"></i> Bank (ব্যাংক)</div>
-          <div class="wallet-icon"><i class="fas fa-piggy-bank"></i></div>
+      <div class="wallet-card-vibrant nagad">
+        <div class="wallet-vibrant-top">
+          <div class="wallet-vibrant-name"><i class="fas fa-wallet"></i> Nagad (নগদ)</div>
+          <div class="wallet-vibrant-icon"><i class="fas fa-paper-plane"></i></div>
         </div>
-        <div class="wallet-balance">${sym}${wallets.bank.balance.toLocaleString()}</div>
-        <div class="wallet-footer">
-          <span>Savings Account</span>
-          <span>Active</span>
+        <div class="wallet-vibrant-balance">${sym}${wallets.nagad.balance.toLocaleString()}</div>
+        <div class="wallet-vibrant-bottom">
+          <span style="font-size: 0.78rem; opacity: 0.9;">Digital Cash</span>
+          <button class="wallet-action-pill" onclick="appController.openAddModalWithWallet('nagad')">
+            <i class="fas fa-plus-circle"></i> Pay / Send
+          </button>
         </div>
       </div>
 
-      <div class="wallet-card cash">
-        <div class="wallet-top">
-          <div class="wallet-name"><i class="fas fa-money-bill-wave"></i> Cash (ক্যাশ)</div>
-          <div class="wallet-icon"><i class="fas fa-hand-holding-usd"></i></div>
+      <div class="wallet-card-vibrant bank">
+        <div class="wallet-vibrant-top">
+          <div class="wallet-vibrant-name"><i class="fas fa-university"></i> Bank Account (ব্যাংক)</div>
+          <div class="wallet-vibrant-icon"><i class="fas fa-piggy-bank"></i></div>
         </div>
-        <div class="wallet-balance">${sym}${wallets.cash.balance.toLocaleString()}</div>
-        <div class="wallet-footer">
-          <span>Cash in Hand</span>
-          <span>Active</span>
+        <div class="wallet-vibrant-balance">${sym}${wallets.bank.balance.toLocaleString()}</div>
+        <div class="wallet-vibrant-bottom">
+          <span style="font-size: 0.78rem; opacity: 0.9;">Savings Account</span>
+          <button class="wallet-action-pill" onclick="appController.openAddModalWithWallet('bank')">
+            <i class="fas fa-university"></i> Transfer
+          </button>
+        </div>
+      </div>
+
+      <div class="wallet-card-vibrant cash">
+        <div class="wallet-vibrant-top">
+          <div class="wallet-vibrant-name"><i class="fas fa-money-bill-wave"></i> Cash in Hand (নগদ)</div>
+          <div class="wallet-vibrant-icon"><i class="fas fa-hand-holding-usd"></i></div>
+        </div>
+        <div class="wallet-vibrant-balance">${sym}${wallets.cash.balance.toLocaleString()}</div>
+        <div class="wallet-vibrant-bottom">
+          <span style="font-size: 0.78rem; opacity: 0.9;">Cash Wallet</span>
+          <button class="wallet-action-pill" onclick="appController.openAddModalWithWallet('cash')">
+            <i class="fas fa-plus-circle"></i> Spend Cash
+          </button>
         </div>
       </div>
     `;
 
     container.innerHTML = html;
+  }
+
+  // Quick Add Expense Widget on Dashboard
+  renderQuickAddCategories() {
+    const select = document.getElementById('quickCatSelect');
+    if (!select) return;
+
+    const categories = dataManager.getCategories().filter(c => c.type === 'expense');
+    select.innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  }
+
+  handleQuickAddExpense(event) {
+    event.preventDefault();
+    if (this.currentRole === 'guardian') {
+      this.showToast('Guardian Observer Mode is Read-Only.', 'info');
+      return;
+    }
+
+    const title = document.getElementById('quickTitleInput').value.trim();
+    const amount = parseFloat(document.getElementById('quickAmountInput').value);
+    const category = document.getElementById('quickCatSelect').value;
+    const walletId = document.getElementById('quickWalletSelect').value;
+
+    if (!title || isNaN(amount) || amount <= 0) {
+      this.showToast('Please enter a title and valid expense amount.', 'error');
+      return;
+    }
+
+    const walletNames = { bkash: 'bKash', nagad: 'Nagad', bank: 'Bank Transfer', cash: 'Cash' };
+
+    const newTx = {
+      title,
+      amount,
+      type: 'expense',
+      category,
+      walletId,
+      date: new Date().toISOString().split('T')[0],
+      method: walletNames[walletId] || 'Cash',
+      note: 'Quick add from dashboard sidebar',
+      flagged: false
+    };
+
+    dataManager.addTransaction(newTx);
+    this.showToast(`Logged Expense: ${title} (${this.currentCurrency}${amount}) via ${walletNames[walletId]}`, 'success');
+    this.renderCurrentView();
+
+    document.getElementById('quickAddForm').reset();
+  }
+
+  // Spending Trend Line Visualizer
+  renderSpendingTrendChart(transactions) {
+    const container = document.getElementById('spendingTrendContainer');
+    if (!container) return;
+
+    const expenses = transactions.filter(t => t.type === 'expense').slice(0, 10).reverse();
+
+    if (expenses.length === 0) {
+      container.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--text-muted);">No spending data recorded.</div>`;
+      return;
+    }
+
+    const amounts = expenses.map(e => parseFloat(e.amount));
+    const maxVal = Math.max(...amounts, 1);
+    const svgWidth = 500;
+    const svgHeight = 140;
+    const padding = 20;
+
+    const points = amounts.map((val, idx) => {
+      const x = padding + (idx / (amounts.length - 1 || 1)) * (svgWidth - 2 * padding);
+      const y = svgHeight - padding - (val / maxVal) * (svgHeight - 2 * padding);
+      return `${x},${y}`;
+    }).join(' ');
+
+    const polyPoints = `${padding},${svgHeight - padding} ${points} ${svgWidth - padding},${svgHeight - padding}`;
+
+    const svg = `
+      <svg viewBox="0 0 ${svgWidth} ${svgHeight}" style="width: 100%; height: 140px; overflow: visible;">
+        <defs>
+          <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--primary)" stop-opacity="0.3"/>
+            <stop offset="100%" stop-color="var(--primary)" stop-opacity="0.0"/>
+          </linearGradient>
+        </defs>
+        <polygon points="${polyPoints}" fill="url(#trendGrad)"/>
+        <polyline points="${points}" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        ${amounts.map((val, idx) => {
+          const x = padding + (idx / (amounts.length - 1 || 1)) * (svgWidth - 2 * padding);
+          const y = svgHeight - padding - (val / maxVal) * (svgHeight - 2 * padding);
+          return `<circle cx="${x}" cy="${y}" r="4" fill="var(--bg-card)" stroke="var(--primary)" stroke-width="2"/>`;
+        }).join('')}
+      </svg>
+    `;
+
+    container.innerHTML = svg;
   }
 
   updateMetrics() {
@@ -225,8 +329,8 @@ class AppController {
 
     if (transactions.length === 0) {
       container.innerHTML = `
-        <div class="empty-state">
-          <i class="fas fa-receipt"></i>
+        <div style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+          <i class="fas fa-receipt" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;"></i>
           <p>No transaction records found.</p>
         </div>
       `;
@@ -314,6 +418,12 @@ class AppController {
 
     document.getElementById('txDate').value = new Date().toISOString().split('T')[0];
     modal.classList.add('active');
+  }
+
+  openAddModalWithWallet(walletId) {
+    this.openAddModal('expense');
+    const walletSelect = document.getElementById('txWalletSelect');
+    if (walletSelect) walletSelect.value = walletId;
   }
 
   closeAddModal() {
@@ -459,20 +569,20 @@ class AppController {
       <div class="card-panel">
         <div class="panel-header">
           <div class="panel-title"><i class="fas fa-user-cog"></i> System Admin Dashboard</div>
-          <span class="tag-method" style="background: var(--primary-glow); color: var(--primary);">System Admin Mode</span>
+          <span class="tag-method" style="background: var(--primary-bg); color: var(--primary);">System Admin Mode</span>
         </div>
         <div class="wallets-grid" style="margin-bottom: 1.5rem;">
-          <div class="wallet-card bkash">
-            <div class="wallet-name">Total System Transactions</div>
-            <div class="wallet-balance">${txs.length}</div>
+          <div class="card-panel" style="padding: 1.2rem; margin-bottom: 0;">
+            <div class="metric-title">Total System Transactions</div>
+            <div class="metric-value">${txs.length}</div>
           </div>
-          <div class="wallet-card bank">
-            <div class="wallet-name">Active Categories</div>
-            <div class="wallet-balance">${categories.length}</div>
+          <div class="card-panel" style="padding: 1.2rem; margin-bottom: 0;">
+            <div class="metric-title">Active Categories</div>
+            <div class="metric-value">${categories.length}</div>
           </div>
-          <div class="wallet-card cash">
-            <div class="wallet-name">Guardian Reference Observers</div>
-            <div class="wallet-balance">${links.length}</div>
+          <div class="card-panel" style="padding: 1.2rem; margin-bottom: 0;">
+            <div class="metric-title">Guardian Observers</div>
+            <div class="metric-value">${links.length}</div>
           </div>
         </div>
       </div>
