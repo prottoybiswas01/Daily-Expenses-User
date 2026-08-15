@@ -136,7 +136,11 @@ exports.generateSharedLink = async (req, res) => {
 
         if (error) {
           console.error('[Resend Email Response Error]:', error);
-          emailError = error.message || JSON.stringify(error);
+          let msg = error.message || 'Resend Email API Error';
+          if (error.name === 'validation_error' || error.statusCode === 403 || error.status === 403) {
+            msg = `[Resend 403 Forbidden]: Free testing domain (onboarding@resend.dev) can only send emails to your registered Resend account email. To send to ${recipientEmail}, please add & verify your domain at resend.com/domains.`;
+          }
+          emailError = msg;
         } else {
           console.log('[Resend Email Sent Success]:', data);
           emailSent = true;
@@ -189,7 +193,11 @@ exports.resendSharedLink = async (req, res) => {
 
     if (error) {
       console.error('[resendSharedLink error]:', error);
-      return res.status(400).json({ success: false, message: `Resend API Error: ${error.message}` });
+      let msg = error.message || 'Resend API Error';
+      if (error.name === 'validation_error' || error.statusCode === 403 || error.status === 403) {
+        msg = `Resend 403 Forbidden: Free test domain (onboarding@resend.dev) can only send emails to your registered Resend account address. To send emails to ${link.recipientEmail}, verify a domain at resend.com/domains.`;
+      }
+      return res.status(400).json({ success: false, message: msg });
     }
 
     res.json({ success: true, message: `Observer link email re-sent successfully to ${link.recipientEmail}` });
