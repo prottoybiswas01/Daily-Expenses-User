@@ -69,8 +69,8 @@
           <button class="role-pill" data-role="admin"><i class="fas fa-shield-alt"></i> Admin</button>
         </div>
 
-        <button class="btn btn-primary auth-only-nav" style="display: none;" onclick="appController.openAddModal('expense')">
-          <i class="fas fa-plus"></i> <span>Log Expense</span>
+        <button class="btn btn-primary auth-only-nav" style="display: none;" onclick="appController.openTopUpModal()">
+          <i class="fas fa-plus-circle"></i> <span>Add Money / Top Up</span>
         </button>
 
         <button class="icon-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme">
@@ -133,9 +133,9 @@
           <div class="feature-icon pink">
             <i class="fas fa-wallet"></i>
           </div>
-          <div class="feature-title">Multi-Wallet Auto-Deduction</div>
+          <div class="feature-title">Multi-Wallet Top Up & Auto-Deduction</div>
           <div class="feature-desc">
-            bKash, Nagad, Bank Account ও Cash in Hand ব্যালেন্স থেকে খরচের টাকা স্বয়ংক্রিয়ভাবে বিয়োগ ও আয় যুক্তের সুবিধা।
+            bKash, Nagad, Bank Account ও Cash in Hand ওয়ালেটে সহজেই টাকা এড করুন এবং খরচের সাথে স্বয়ংক্রিয় ব্যালেন্স সমন্বয় করুন।
           </div>
         </div>
 
@@ -246,12 +246,17 @@
         </div>
       </div>
 
-      <!-- WALLET BALANCES SECTION (bKash, Nagad, Bank, Cash) -->
+      <!-- WALLET BALANCES SECTION (bKash, Nagad, Bank, Cash) WITH DIRECT ADD MONEY BUTTONS -->
       <div class="wallets-section-title">
         <span><i class="fas fa-wallet" style="color: var(--primary);"></i> My Accounts & Wallets</span>
-        <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="appController.openTransferModal()">
-          <i class="fas fa-exchange-alt"></i> Transfer Funds
-        </button>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="appController.openTopUpModal()">
+            <i class="fas fa-plus-circle"></i> Add Money (টাকা এড করুন)
+          </button>
+          <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="appController.openTransferModal()">
+            <i class="fas fa-exchange-alt"></i> Transfer
+          </button>
+        </div>
       </div>
 
       <div id="walletsGridContainer" class="wallets-grid"></div>
@@ -260,7 +265,7 @@
       <div class="metrics-grid">
         <div class="metric-card">
           <div class="metric-header">
-            <span class="metric-title">Total Income</span>
+            <span class="metric-title">Total Income (আয়)</span>
             <div class="metric-icon income"><i class="fas fa-arrow-down"></i></div>
           </div>
           <div class="metric-value" id="metricIncome">৳0</div>
@@ -268,7 +273,7 @@
 
         <div class="metric-card">
           <div class="metric-header">
-            <span class="metric-title">Total Expense</span>
+            <span class="metric-title">Total Expense (খরচ)</span>
             <div class="metric-icon expense"><i class="fas fa-arrow-up"></i></div>
           </div>
           <div class="metric-value" id="metricExpense">৳0</div>
@@ -276,7 +281,7 @@
 
         <div class="metric-card">
           <div class="metric-header">
-            <span class="metric-title">Net Liquidity Balance</span>
+            <span class="metric-title">Net Liquidity (মোট ব্যালেন্স)</span>
             <div class="metric-icon balance"><i class="fas fa-wallet"></i></div>
           </div>
           <div class="metric-value" id="metricBalance">৳0</div>
@@ -464,6 +469,50 @@
     <button class="mobile-nav-btn auth-only-nav" style="display: none;" data-view="share">
       <i class="fas fa-user-shield"></i> Reference
     </button>
+  </div>
+
+  <!-- NEW MODAL: ADD MONEY / TOP UP TO WALLET & SET BUDGET -->
+  <div id="topUpModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fas fa-plus-circle" style="color: var(--success);"></i> Add Money to Wallet (টাকা এড করুন)</h3>
+        <button class="close-btn" onclick="appController.closeTopUpModal()"><i class="fas fa-times"></i></button>
+      </div>
+
+      <form onsubmit="appController.handleSaveTopUp(event)">
+        <div class="form-group">
+          <label>Select Target Wallet (কোন ওয়ালেটে টাকা এড করবেন)</label>
+          <select id="topUpWalletSelect" required>
+            <option value="bkash">bKash (বিকাশ)</option>
+            <option value="nagad">Nagad (নগদ)</option>
+            <option value="bank">Bank Account (ব্যাংক)</option>
+            <option value="cash">Cash in Hand (নগদ ক্যাশ)</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Amount to Add (টাকার পরিমাণ)</label>
+            <input type="number" id="topUpAmount" placeholder="e.g. 5000" step="0.01" required>
+          </div>
+          <div class="form-group">
+            <label>Source / Description (উৎস)</label>
+            <input type="text" id="topUpSource" placeholder="e.g. বাসা থেকে পাঠিয়েছে, টিউশনি..." required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Set / Update Monthly Budget (ঐচ্ছিক মান্থলি বাজেট সেট করুন)</label>
+          <input type="number" id="topUpBudget" placeholder="e.g. 15000 (যেমন ১৫,০০০ টাকা বাজেট)">
+          <span style="font-size: 0.75rem; color: var(--text-muted);">এই টাকাটা আপনার মান্থলি বাজেটেও যুক্ত হবে।</span>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="appController.closeTopUpModal()">Cancel</button>
+          <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> Deposit & Update Wallet</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- MODAL: ADD TRANSACTION WITH WALLET SELECTION -->

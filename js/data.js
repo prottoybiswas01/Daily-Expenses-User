@@ -1,5 +1,5 @@
 /* ==========================================================================
-   DAILY EXPENSES TRACKER - DATA MANAGER & WALLET SYSTEM (HOME & AUTH READY)
+   DAILY EXPENSES TRACKER - DATA MANAGER & WALLET SYSTEM (TOP-UP & BUDGET INTEGRATION)
    ========================================================================== */
 
 const STORAGE_KEYS = {
@@ -51,7 +51,7 @@ class DataManager {
         currency: '৳',
         currencySymbol: '৳',
         theme: 'light',
-        monthlyBudget: 0, // Set default budget to 0 (Dynamic)
+        monthlyBudget: 0,
         userName: 'Tanvir Hossain',
         userEmail: 'tanvir.cs@university.edu'
       };
@@ -67,6 +67,11 @@ class DataManager {
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify([]));
     localStorage.setItem(STORAGE_KEYS.WALLETS, JSON.stringify(CLEAN_WALLETS));
     localStorage.setItem(STORAGE_KEYS.SHARED_ACCESS, JSON.stringify([]));
+    
+    // Reset budget to 0
+    const settings = this.getSettings();
+    settings.monthlyBudget = 0;
+    localStorage.setItem(STORAGE_KEYS.USER_SETTINGS, JSON.stringify(settings));
     return true;
   }
 
@@ -86,10 +91,60 @@ class DataManager {
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
   }
 
+  // Direct Wallet Top Up / Add Money Feature
+  topUpWallet(walletId, amount, sourceName = 'Family Allowance', newBudget = null) {
+    const wallets = this.getWallets();
+    const amt = parseFloat(amount) || 0;
+    if (amt <= 0 || !wallets[walletId]) return false;
+
+    // Add amount to wallet balance
+    wallets[walletId].balance += amt;
+    this.saveWallets(wallets);
+
+    const walletNames = { bkash: 'bKash', nagad: 'Nagad', bank: 'Bank Account', cash: 'Cash in Hand' };
+
+    // Record as Income Deposit Transaction
+    const tx = {
+      id: 'tx_' + Date.now(),
+      title: `Deposit / Top Up: ${walletNames[walletId]} (${sourceName})`,
+      amount: amt,
+      type: 'income',
+      category: 'cat_allowance',
+      walletId: walletId,
+      date: new Date().toISOString().split('T')[0],
+      method: walletNames[walletId],
+      note: `Added money to wallet`,
+      flagged: false
+    };
+
+    const list = this.getTransactions();
+    list.unshift(tx);
+    this.saveTransactions(list);
+
+    // Update monthly budget if provided
+    if (newBudget !== null && !isNaN(newBudget) && newBudget > 0) {
+      this.updateSettings({ monthlyBudget: parseFloat(newBudget) });
+    }
+
+    return true;
+  }
+
+  // Direct Wallet Exact Balance Override
+  setWalletBalance(walletId, exactBalance) {
+    const wallets = this.getWallets();
+    const amt = parseFloat(exactBalance) || 0;
+    if (wallets[walletId]) {
+      wallets[walletId].balance = Math.max(0, amt);
+      this.saveWallets(wallets);
+      return true;
+    }
+    return false;
+  }
+
   // Automatic Wallet Balance Update Engine
   addTransaction(tx) {
     const list = this.getTransactions();
-    tx.id = 'tx_' + Date.now();
+    tx.id = 'tx_' + Date.now(),
     list.unshift(tx);
     this.saveTransactions(list);
 
@@ -232,7 +287,7 @@ class DataManager {
     });
 
     const settings = this.getSettings();
-    const budget = settings.monthlyBudget || 0;
+    const budget = settings.monthlyBudget || totalIncome || 0;
     const budgetUsedPercent = budget > 0 ? Math.min(Math.round((totalExpense / budget) * 100), 100) : 0;
 
     return {

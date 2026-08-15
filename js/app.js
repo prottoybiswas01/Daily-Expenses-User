@@ -1,5 +1,5 @@
 /* ==========================================================================
-   DAILY EXPENSES TRACKER - MAIN APP CONTROLLER (PUBLIC HOME & AUTH CONTROLLER)
+   DAILY EXPENSES TRACKER - MAIN APP CONTROLLER (TOP-UP & WALLET ENGINE)
    ========================================================================== */
 
 class AppController {
@@ -186,7 +186,7 @@ class AppController {
     }
   }
 
-  // Render Vibrant Wallet Cards (bKash, Nagad, Bank, Cash)
+  // Render Vibrant Wallet Cards (bKash, Nagad, Bank, Cash) with Top Up & Pay Action Pills
   renderWalletsSummary() {
     const container = document.getElementById('walletsGridContainer');
     if (!container) return;
@@ -202,9 +202,11 @@ class AppController {
         </div>
         <div class="wallet-vibrant-balance">${sym}${wallets.bkash.balance.toLocaleString()}</div>
         <div class="wallet-vibrant-bottom">
-          <span style="font-size: 0.78rem; opacity: 0.9;">Mobile Wallet</span>
-          <button class="wallet-action-pill" onclick="appController.openAddModalWithWallet('bkash')">
-            <i class="fas fa-plus-circle"></i> Pay / Deposit
+          <button class="wallet-action-pill" onclick="appController.openTopUpModal('bkash')">
+            <i class="fas fa-plus"></i> Add Money
+          </button>
+          <button class="wallet-action-pill" style="background: rgba(0,0,0,0.2);" onclick="appController.openAddModalWithWallet('bkash')">
+            <i class="fas fa-minus"></i> Spend
           </button>
         </div>
       </div>
@@ -216,9 +218,11 @@ class AppController {
         </div>
         <div class="wallet-vibrant-balance">${sym}${wallets.nagad.balance.toLocaleString()}</div>
         <div class="wallet-vibrant-bottom">
-          <span style="font-size: 0.78rem; opacity: 0.9;">Digital Cash</span>
-          <button class="wallet-action-pill" onclick="appController.openAddModalWithWallet('nagad')">
-            <i class="fas fa-plus-circle"></i> Pay / Deposit
+          <button class="wallet-action-pill" onclick="appController.openTopUpModal('nagad')">
+            <i class="fas fa-plus"></i> Add Money
+          </button>
+          <button class="wallet-action-pill" style="background: rgba(0,0,0,0.2);" onclick="appController.openAddModalWithWallet('nagad')">
+            <i class="fas fa-minus"></i> Spend
           </button>
         </div>
       </div>
@@ -230,9 +234,11 @@ class AppController {
         </div>
         <div class="wallet-vibrant-balance">${sym}${wallets.bank.balance.toLocaleString()}</div>
         <div class="wallet-vibrant-bottom">
-          <span style="font-size: 0.78rem; opacity: 0.9;">Savings Account</span>
-          <button class="wallet-action-pill" onclick="appController.openAddModalWithWallet('bank')">
-            <i class="fas fa-university"></i> Deposit
+          <button class="wallet-action-pill" onclick="appController.openTopUpModal('bank')">
+            <i class="fas fa-plus"></i> Add Money
+          </button>
+          <button class="wallet-action-pill" style="background: rgba(0,0,0,0.2);" onclick="appController.openAddModalWithWallet('bank')">
+            <i class="fas fa-minus"></i> Spend
           </button>
         </div>
       </div>
@@ -244,9 +250,11 @@ class AppController {
         </div>
         <div class="wallet-vibrant-balance">${sym}${wallets.cash.balance.toLocaleString()}</div>
         <div class="wallet-vibrant-bottom">
-          <span style="font-size: 0.78rem; opacity: 0.9;">Cash Wallet</span>
-          <button class="wallet-action-pill" onclick="appController.openAddModalWithWallet('cash')">
-            <i class="fas fa-plus-circle"></i> Spend Cash
+          <button class="wallet-action-pill" onclick="appController.openTopUpModal('cash')">
+            <i class="fas fa-plus"></i> Add Cash
+          </button>
+          <button class="wallet-action-pill" style="background: rgba(0,0,0,0.2);" onclick="appController.openAddModalWithWallet('cash')">
+            <i class="fas fa-minus"></i> Spend
           </button>
         </div>
       </div>
@@ -313,7 +321,7 @@ class AppController {
       container.innerHTML = `
         <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
           <i class="fas fa-chart-line" style="font-size: 1.8rem; opacity: 0.4; margin-bottom: 0.4rem;"></i>
-          <p style="font-size: 0.88rem;">No spending recorded yet. Start by logging an income or expense!</p>
+          <p style="font-size: 0.88rem;">No spending recorded yet. Add money to your wallet to start tracking!</p>
         </div>
       `;
       return;
@@ -372,7 +380,7 @@ class AppController {
       } else {
         elemBudget.textContent = summary.totalIncome > 0 
           ? `Budget: ${sym}${summary.totalIncome.toLocaleString()} (From Income)`
-          : `${sym}0 set (Add Income to set)`;
+          : `${sym}0 set (Click Add Money)`;
       }
     }
   }
@@ -405,7 +413,7 @@ class AppController {
         <div style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
           <i class="fas fa-receipt" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.4;"></i>
           <p style="font-size: 0.9rem; font-weight: 600;">No transactions recorded yet.</p>
-          <p style="font-size: 0.8rem;">Click "Log Expense" or "Add Income" to start tracking.</p>
+          <p style="font-size: 0.8rem;">Click "Add Money / Top Up" to deposit money into your bKash, Nagad, Bank, or Cash wallet!</p>
         </div>
       `;
       return;
@@ -451,6 +459,50 @@ class AppController {
     }).join('');
 
     container.innerHTML = html;
+  }
+
+  // TOP UP / ADD MONEY MODAL HANDLERS
+  openTopUpModal(walletId = 'bkash') {
+    if (this.currentRole === 'guardian') {
+      this.showToast('Guardian Observer Mode is Read-Only.', 'info');
+      return;
+    }
+
+    const modal = document.getElementById('topUpModal');
+    const select = document.getElementById('topUpWalletSelect');
+    if (select) select.value = walletId;
+
+    modal.classList.add('active');
+  }
+
+  closeTopUpModal() {
+    document.getElementById('topUpModal').classList.remove('active');
+  }
+
+  handleSaveTopUp(event) {
+    event.preventDefault();
+
+    const walletId = document.getElementById('topUpWalletSelect').value;
+    const amount = parseFloat(document.getElementById('topUpAmount').value);
+    const sourceName = document.getElementById('topUpSource').value.trim();
+    const budgetInput = document.getElementById('topUpBudget').value.trim();
+
+    if (isNaN(amount) || amount <= 0) {
+      this.showToast('Please enter a valid deposit amount.', 'error');
+      return;
+    }
+
+    const newBudget = budgetInput ? parseFloat(budgetInput) : null;
+    const success = dataManager.topUpWallet(walletId, amount, sourceName || 'Allowance Deposit', newBudget);
+
+    if (success) {
+      const walletNames = { bkash: 'bKash', nagad: 'Nagad', bank: 'Bank Account', cash: 'Cash' };
+      this.closeTopUpModal();
+      this.showToast(`Added ${this.currentCurrency}${amount} to ${walletNames[walletId]} wallet!`, 'success');
+      this.renderCurrentView();
+    } else {
+      this.showToast('Failed to deposit money to wallet.', 'error');
+    }
   }
 
   populateCategoryFilterDropdown() {
