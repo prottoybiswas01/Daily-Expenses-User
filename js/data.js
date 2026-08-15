@@ -1,5 +1,5 @@
 /* ==========================================================================
-   DAILY EXPENSES TRACKER - DATA MANAGER & WALLET SYSTEM (CLEAN SLATE VERSION)
+   DAILY EXPENSES TRACKER - DATA MANAGER & WALLET SYSTEM (HOME & AUTH READY)
    ========================================================================== */
 
 const STORAGE_KEYS = {
@@ -37,14 +37,6 @@ class DataManager {
   }
 
   init() {
-    // Clear legacy seed demo data if present
-    const isCleaned = localStorage.getItem('daily_expenses_clean_slate_v2');
-    if (!isCleaned) {
-      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.WALLETS, JSON.stringify(CLEAN_WALLETS));
-      localStorage.setItem('daily_expenses_clean_slate_v2', 'true');
-    }
-
     if (!localStorage.getItem(STORAGE_KEYS.TRANSACTIONS)) {
       localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify([]));
     }
@@ -59,14 +51,14 @@ class DataManager {
         currency: '৳',
         currencySymbol: '৳',
         theme: 'light',
-        monthlyBudget: 15000,
+        monthlyBudget: 0, // Set default budget to 0 (Dynamic)
         userName: 'Tanvir Hossain',
         userEmail: 'tanvir.cs@university.edu'
       };
       localStorage.setItem(STORAGE_KEYS.USER_SETTINGS, JSON.stringify(defaultSettings));
     }
     if (!localStorage.getItem(STORAGE_KEYS.AUTH_USER)) {
-      localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify({ isLoggedIn: true, email: 'tanvir.cs@university.edu', name: 'Tanvir Hossain' }));
+      localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify({ isLoggedIn: false, email: '', name: '' }));
     }
   }
 
@@ -194,7 +186,7 @@ class DataManager {
   }
 
   getAuthUser() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.AUTH_USER)) || { isLoggedIn: true, email: 'tanvir.cs@university.edu', name: 'Tanvir Hossain' };
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.AUTH_USER)) || { isLoggedIn: false, email: '', name: '' };
   }
 
   setAuthUser(user) {
@@ -240,7 +232,7 @@ class DataManager {
     });
 
     const settings = this.getSettings();
-    const budget = settings.monthlyBudget || 15000;
+    const budget = settings.monthlyBudget || 0;
     const budgetUsedPercent = budget > 0 ? Math.min(Math.round((totalExpense / budget) * 100), 100) : 0;
 
     return {

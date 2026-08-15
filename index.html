@@ -13,42 +13,47 @@
 </head>
 <body>
 
-  <!-- Sticky Header Bar -->
+  <!-- Sticky Compact Header Bar -->
   <header class="app-header">
     <div class="header-container">
       
       <!-- Brand Logo -->
-      <div class="brand-logo" onclick="appController.switchView('dashboard')" style="cursor: pointer;">
+      <div class="brand-logo" onclick="appController.switchView('home')" style="cursor: pointer;" title="Daily Expenses Home">
         <i class="fas fa-wallet"></i>
-        <div>
+        <div style="display: flex; align-items: center; gap: 4px;">
           <span>Daily Expenses</span>
-          <span class="brand-tag">Student Edition</span>
+          <span class="brand-tag">Student</span>
         </div>
       </div>
 
       <!-- Navigation Links -->
-      <ul class="nav-links">
+      <ul class="nav-links" id="mainNavLinks">
         <li>
-          <button class="nav-btn active" data-view="dashboard">
+          <button class="nav-btn active" data-view="home">
+            <i class="fas fa-globe"></i> Home
+          </button>
+        </li>
+        <li class="auth-only-nav" style="display: none;">
+          <button class="nav-btn" data-view="dashboard">
             <i class="fas fa-home"></i> Dashboard
           </button>
         </li>
-        <li>
+        <li class="auth-only-nav" style="display: none;">
           <button class="nav-btn" data-view="transactions">
-            <i class="fas fa-list-ul"></i> All Records
+            <i class="fas fa-list-ul"></i> Records
           </button>
         </li>
-        <li>
+        <li class="auth-only-nav" style="display: none;">
           <button class="nav-btn" data-view="analytics">
             <i class="fas fa-chart-pie"></i> Analytics
           </button>
         </li>
-        <li>
+        <li class="auth-only-nav" style="display: none;">
           <button class="nav-btn" data-view="share">
-            <i class="fas fa-user-shield"></i> Reference / Guardian
+            <i class="fas fa-user-shield"></i> Guardian Link
           </button>
         </li>
-        <li>
+        <li class="auth-only-nav" style="display: none;">
           <button class="nav-btn" data-view="admin">
             <i class="fas fa-cog"></i> Admin
           </button>
@@ -58,13 +63,13 @@
       <!-- Header Controls -->
       <div class="header-actions">
         <!-- Role Switcher -->
-        <div class="role-selector" title="Switch View Mode">
+        <div class="role-selector" id="roleSelectorBox" title="Switch View Mode" style="display: none;">
           <button class="role-pill active" data-role="student"><i class="fas fa-user-graduate"></i> Student</button>
-          <button class="role-pill" data-role="guardian"><i class="fas fa-eye"></i> Guardian</button>
+          <button class="role-pill" data-role="guardian"><i class="fas fa-eye"></i> Observer</button>
           <button class="role-pill" data-role="admin"><i class="fas fa-shield-alt"></i> Admin</button>
         </div>
 
-        <button class="btn btn-primary" onclick="appController.openAddModal('expense')">
+        <button class="btn btn-primary auth-only-nav" style="display: none;" onclick="appController.openAddModal('expense')">
           <i class="fas fa-plus"></i> <span>Log Expense</span>
         </button>
 
@@ -72,12 +77,12 @@
           <i class="fas fa-sun"></i>
         </button>
 
-        <button class="icon-btn" onclick="appController.resetAllAppData()" title="Reset to Clean Slate (0 Balance)">
+        <button class="icon-btn auth-only-nav" style="display: none;" onclick="appController.resetAllAppData()" title="Reset to Clean Slate (0 Balance)">
           <i class="fas fa-redo-alt"></i>
         </button>
 
-        <button class="icon-btn" onclick="appController.switchView('auth')" title="Login / Profile">
-          <i class="fas fa-user"></i>
+        <button class="btn btn-secondary" id="navAuthBtn" onclick="appController.handleAuthNavClick()">
+          <i class="fas fa-sign-in-alt"></i> <span id="navAuthText">Login</span>
         </button>
       </div>
 
@@ -87,21 +92,92 @@
   <!-- Main Content Wrapper -->
   <main class="main-wrapper">
 
-    <!-- Guardian Review Notice -->
-    <div id="roleGuardianNotice" class="guardian-badge-banner" style="display: none;">
-      <div>
-        <h3><i class="fas fa-eye"></i> Guardian Observer Review Mode</h3>
-        <p>Viewing real-time student expenditure records for Tanvir Hossain. Access is set to Read-Only Reviewer.</p>
+    <!-- Guardian Review Notice Banner -->
+    <div id="roleGuardianNotice" class="guardian-badge-banner" style="display: none; background: var(--primary-bg); border: 1px solid var(--border-glow); padding: 0.85rem 1.25rem; border-radius: var(--radius-md); margin-bottom: 1.25rem;">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <h4 style="color: var(--primary); font-size: 0.95rem; font-weight: 700;"><i class="fas fa-eye"></i> Guardian Observer Mode Active</h4>
+          <p style="font-size: 0.82rem; color: var(--text-muted);">Viewing real-time student expenditure records for Tanvir Hossain in Read-Only Mode.</p>
+        </div>
+        <button class="btn btn-secondary" style="font-size: 0.78rem;" onclick="appController.switchRole('student')">Switch to Student View</button>
       </div>
-      <button class="btn btn-secondary" onclick="appController.switchRole('student')">Return to Student View</button>
     </div>
 
-    <!-- VIEW 0: AUTHENTICATION (LOGIN & REGISTRATION) -->
+    <!-- VIEW 0: PUBLIC LANDING / HOME PAGE -->
+    <section id="view-home" class="view-section active">
+      
+      <div class="home-hero-container">
+        <span class="home-hero-badge">
+          <i class="fas fa-graduation-cap"></i> Student Financial Freedom & Expense Management
+        </span>
+        <h1 class="home-hero-title">
+          দৈনন্দিন খরচ ও ওয়ালেট ব্যালেন্স ট্র্যাকার
+        </h1>
+        <p class="home-hero-sub">
+          bKash, Nagad, Bank Account এবং Cash In Hand ব্যালেন্স অটো-ডিডাকশন সহ শিক্ষার্থীদের মেস ভাড়া, বেতন, বাস ভাড়া ও দৈনন্দিন খরচের নির্ভুল হিসাব রাখার একমাত্র অ্যাপ।
+        </p>
+
+        <div style="display: flex; justify-content: center; gap: 0.85rem; flex-wrap: wrap;">
+          <button class="btn btn-primary" style="padding: 0.7rem 1.5rem; font-size: 0.95rem;" onclick="appController.quickDemoLogin()">
+            <i class="fas fa-rocket"></i> Explore Demo Dashboard (1-Click)
+          </button>
+          <button class="btn btn-secondary" style="padding: 0.7rem 1.5rem; font-size: 0.95rem;" onclick="appController.switchView('auth')">
+            <i class="fas fa-user-plus"></i> Student Register / Login
+          </button>
+        </div>
+      </div>
+
+      <!-- Feature Grid -->
+      <div class="home-features-grid">
+        <div class="feature-card">
+          <div class="feature-icon pink">
+            <i class="fas fa-wallet"></i>
+          </div>
+          <div class="feature-title">Multi-Wallet Auto-Deduction</div>
+          <div class="feature-desc">
+            bKash, Nagad, Bank Account ও Cash in Hand ব্যালেন্স থেকে খরচের টাকা স্বয়ংক্রিয়ভাবে বিয়োগ ও আয় যুক্তের সুবিধা।
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon orange">
+            <i class="fas fa-chart-line"></i>
+          </div>
+          <div class="feature-title">Spending Trend & Analytics</div>
+          <div class="feature-desc">
+            ক্যাটাগরিভিত্তিক পাই চার্ট, খরচের কার্ভ লাইন ও বাজেট ট্র্যাকিং ভিজ্যুয়ালাইজারের মাধ্যমে বাজেটের মধ্যে থাকুন।
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon green">
+            <i class="fas fa-user-shield"></i>
+          </div>
+          <div class="feature-title">Guardian Reference Observer</div>
+          <div class="feature-desc">
+            অভিভাবকদের সাথে শেয়ার করার জন্য রিড-অনলি রেফারেন্স এক্সেস কোড তৈরি করে স্বচ্ছতা বজায় রাখুন।
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon blue">
+            <i class="fas fa-bolt"></i>
+          </div>
+          <div class="feature-title">Quick Log Expense Sidebar</div>
+          <div class="feature-desc">
+            কোনো বাড়তি ক্লিক ছাড়াই সরাসরি ড্যাশবোর্ড থেকে তাৎক্ষণিক চা, বাস ভাড়া ও খাবার খরচ এন্ট্রি নেওয়ার সুবিধা।
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- VIEW 1: AUTHENTICATION (LOGIN & REGISTRATION) -->
     <section id="view-auth" class="view-section">
       <div class="auth-container">
         <div class="auth-header">
-          <h2 style="font-family: 'Outfit'; font-size: 1.6rem; margin-bottom: 0.25rem;">Daily Expenses Access</h2>
-          <p style="color: var(--text-muted); font-size: 0.9rem;">Login or Create a Student Account</p>
+          <h2 style="font-family: 'Outfit'; font-size: 1.5rem; margin-bottom: 0.25rem;">Daily Expenses Access</h2>
+          <p style="color: var(--text-muted); font-size: 0.88rem;">Login or Create a Student Account</p>
         </div>
 
         <div class="auth-tabs">
@@ -120,8 +196,14 @@
             <input type="password" value="••••••••" required>
           </div>
           <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
-            <i class="fas fa-sign-in-alt"></i> Login to Account
+            <i class="fas fa-sign-in-alt"></i> Login to Student Account
           </button>
+          
+          <div style="margin-top: 1rem; text-align: center;">
+            <button type="button" class="btn btn-secondary" style="width: 100%; font-size: 0.82rem;" onclick="appController.quickDemoLogin()">
+              <i class="fas fa-magic"></i> Instant Demo Login
+            </button>
+          </div>
         </form>
 
         <!-- Register Form -->
@@ -145,14 +227,14 @@
       </div>
     </section>
 
-    <!-- VIEW 1: DASHBOARD -->
-    <section id="view-dashboard" class="view-section active">
+    <!-- VIEW 2: STUDENT DASHBOARD -->
+    <section id="view-dashboard" class="view-section">
       
       <!-- Welcome Bar -->
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 0.75rem;">
         <div>
-          <h1 style="font-family: 'Outfit'; font-size: 1.6rem; font-weight: 700;">Dashboard</h1>
-          <p style="color: var(--text-muted); font-size: 0.9rem;">Hello Tanvir, here is your student financial summary & wallet balances.</p>
+          <h1 style="font-family: 'Outfit'; font-size: 1.5rem; font-weight: 700;">Student Dashboard</h1>
+          <p style="color: var(--text-muted); font-size: 0.88rem;">Hello <span id="dashUserName">Tanvir</span>, here is your student financial summary & wallet balances.</p>
         </div>
         <div style="display: flex; align-items: center; gap: 0.5rem; background: var(--bg-card); padding: 0.4rem 0.8rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); font-size: 0.85rem;">
           <i class="fas fa-coins" style="color: var(--warning);"></i>
@@ -167,7 +249,7 @@
       <!-- WALLET BALANCES SECTION (bKash, Nagad, Bank, Cash) -->
       <div class="wallets-section-title">
         <span><i class="fas fa-wallet" style="color: var(--primary);"></i> My Accounts & Wallets</span>
-        <button class="btn btn-secondary" style="padding: 0.4rem 0.85rem; font-size: 0.8rem;" onclick="appController.openTransferModal()">
+        <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="appController.openTransferModal()">
           <i class="fas fa-exchange-alt"></i> Transfer Funds
         </button>
       </div>
@@ -178,7 +260,7 @@
       <div class="metrics-grid">
         <div class="metric-card">
           <div class="metric-header">
-            <span class="metric-title">Total Monthly Income</span>
+            <span class="metric-title">Total Income</span>
             <div class="metric-icon income"><i class="fas fa-arrow-down"></i></div>
           </div>
           <div class="metric-value" id="metricIncome">৳0</div>
@@ -186,7 +268,7 @@
 
         <div class="metric-card">
           <div class="metric-header">
-            <span class="metric-title">Total Monthly Expense</span>
+            <span class="metric-title">Total Expense</span>
             <div class="metric-icon expense"><i class="fas fa-arrow-up"></i></div>
           </div>
           <div class="metric-value" id="metricExpense">৳0</div>
@@ -205,7 +287,7 @@
             <span class="metric-title">Monthly Budget Status</span>
             <div class="metric-icon budget"><i class="fas fa-bullseye"></i></div>
           </div>
-          <div class="metric-value" id="metricBudget">0%</div>
+          <div class="metric-value" id="metricBudget" style="font-size: 1.1rem; margin-top: 2px;">৳0 set</div>
         </div>
       </div>
 
@@ -227,7 +309,7 @@
           <div class="card-panel">
             <div class="panel-header">
               <div class="panel-title"><i class="fas fa-history"></i> Recent Transactions</div>
-              <div style="display: flex; gap: 0.5rem;">
+              <div style="display: flex; gap: 0.4rem;">
                 <button class="btn btn-success" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="appController.openAddModal('income')">
                   <i class="fas fa-plus-circle"></i> Income
                 </button>
@@ -304,7 +386,7 @@
 
     </section>
 
-    <!-- VIEW 2: TRANSACTIONS RECORD LIST -->
+    <!-- VIEW 3: TRANSACTIONS RECORD LIST -->
     <section id="view-transactions" class="view-section">
       <div class="card-panel">
         <div class="panel-header">
@@ -328,7 +410,7 @@
       </div>
     </section>
 
-    <!-- VIEW 3: ANALYTICS -->
+    <!-- VIEW 4: ANALYTICS -->
     <section id="view-analytics" class="view-section">
       <div class="card-panel">
         <div class="panel-header">
@@ -353,12 +435,12 @@
       </div>
     </section>
 
-    <!-- VIEW 4: SHARE / GUARDIAN REFERENCE -->
+    <!-- VIEW 5: SHARE / GUARDIAN REFERENCE -->
     <section id="view-share" class="view-section">
       <div id="sharePanelContainer"></div>
     </section>
 
-    <!-- VIEW 5: ADMIN PANEL -->
+    <!-- VIEW 6: ADMIN PANEL -->
     <section id="view-admin" class="view-section">
       <div id="adminPanelContainer"></div>
     </section>
@@ -367,16 +449,19 @@
 
   <!-- MOBILE BOTTOM NAVIGATION BAR -->
   <div class="mobile-bottom-bar">
-    <button class="mobile-nav-btn active" data-view="dashboard">
+    <button class="mobile-nav-btn active" data-view="home">
+      <i class="fas fa-globe"></i> Home
+    </button>
+    <button class="mobile-nav-btn auth-only-nav" style="display: none;" data-view="dashboard">
       <i class="fas fa-home"></i> Dashboard
     </button>
-    <button class="mobile-nav-btn" data-view="transactions">
+    <button class="mobile-nav-btn auth-only-nav" style="display: none;" data-view="transactions">
       <i class="fas fa-list-ul"></i> Records
     </button>
-    <button class="mobile-nav-btn" data-view="analytics">
+    <button class="mobile-nav-btn auth-only-nav" style="display: none;" data-view="analytics">
       <i class="fas fa-chart-pie"></i> Analytics
     </button>
-    <button class="mobile-nav-btn" data-view="share">
+    <button class="mobile-nav-btn auth-only-nav" style="display: none;" data-view="share">
       <i class="fas fa-user-shield"></i> Reference
     </button>
   </div>

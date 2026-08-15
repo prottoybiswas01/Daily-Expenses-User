@@ -1,11 +1,11 @@
 /* ==========================================================================
-   DAILY EXPENSES TRACKER - MAIN APP CONTROLLER (AUTHENTICATION & WALLETS)
+   DAILY EXPENSES TRACKER - MAIN APP CONTROLLER (PUBLIC HOME & AUTH CONTROLLER)
    ========================================================================== */
 
 class AppController {
   constructor() {
     this.currentRole = 'student'; // 'student' | 'guardian' | 'admin'
-    this.currentView = 'dashboard';
+    this.currentView = 'home';
     this.selectedCategoryFilter = 'all';
     this.searchQuery = '';
     this.currentCurrency = '৳';
@@ -14,8 +14,14 @@ class AppController {
   init() {
     this.setupEventListeners();
     this.loadTheme();
-    this.checkAuth();
-    this.renderCurrentView();
+    this.checkAuthUI();
+    
+    const auth = dataManager.getAuthUser();
+    if (auth && auth.isLoggedIn) {
+      this.switchView('dashboard');
+    } else {
+      this.switchView('home');
+    }
   }
 
   setupEventListeners() {
@@ -42,11 +48,51 @@ class AppController {
     });
   }
 
-  checkAuth() {
+  checkAuthUI() {
     const auth = dataManager.getAuthUser();
-    if (!auth || !auth.isLoggedIn) {
+    const isLoggedIn = auth && auth.isLoggedIn;
+
+    document.querySelectorAll('.auth-only-nav').forEach(elem => {
+      elem.style.display = isLoggedIn ? 'inline-flex' : 'none';
+    });
+
+    const roleBox = document.getElementById('roleSelectorBox');
+    if (roleBox) {
+      roleBox.style.display = isLoggedIn ? 'flex' : 'none';
+    }
+
+    const navAuthText = document.getElementById('navAuthText');
+    if (navAuthText) {
+      navAuthText.textContent = isLoggedIn ? 'Logout' : 'Login';
+    }
+
+    const userNameElem = document.getElementById('dashUserName');
+    if (userNameElem && auth.name) {
+      userNameElem.textContent = auth.name;
+    }
+  }
+
+  handleAuthNavClick() {
+    const auth = dataManager.getAuthUser();
+    if (auth && auth.isLoggedIn) {
+      this.logout();
+    } else {
       this.switchView('auth');
     }
+  }
+
+  quickDemoLogin() {
+    dataManager.setAuthUser({ isLoggedIn: true, email: 'student@university.edu', name: 'Tanvir Hossain' });
+    this.checkAuthUI();
+    this.showToast('Logged in to Student Dashboard!', 'success');
+    this.switchView('dashboard');
+  }
+
+  logout() {
+    dataManager.setAuthUser({ isLoggedIn: false, email: '', name: '' });
+    this.checkAuthUI();
+    this.showToast('Logged out successfully.', 'info');
+    this.switchView('home');
   }
 
   loadTheme() {
@@ -88,6 +134,12 @@ class AppController {
   }
 
   switchView(viewName) {
+    const auth = dataManager.getAuthUser();
+    if (viewName !== 'home' && viewName !== 'auth' && (!auth || !auth.isLoggedIn)) {
+      this.showToast('Please login to access the Student Dashboard.', 'info');
+      viewName = 'auth';
+    }
+
     this.currentView = viewName;
 
     document.querySelectorAll('.nav-btn, .mobile-nav-btn').forEach(btn => {
@@ -107,6 +159,7 @@ class AppController {
   }
 
   renderCurrentView() {
+    this.checkAuthUI();
     this.updateMetrics();
     this.renderWalletsSummary();
 
@@ -179,7 +232,7 @@ class AppController {
         <div class="wallet-vibrant-bottom">
           <span style="font-size: 0.78rem; opacity: 0.9;">Savings Account</span>
           <button class="wallet-action-pill" onclick="appController.openAddModalWithWallet('bank')">
-            <i class="fas fa-university"></i> Transfer / Deposit
+            <i class="fas fa-university"></i> Deposit
           </button>
         </div>
       </div>
@@ -314,7 +367,13 @@ class AppController {
     if (elemExpense) elemExpense.textContent = `${sym}${summary.totalExpense.toLocaleString()}`;
     if (elemBalance) elemBalance.textContent = `${sym}${summary.netBalance.toLocaleString()}`;
     if (elemBudget) {
-      elemBudget.textContent = `${summary.budgetUsedPercent}% used (${sym}${summary.totalExpense.toLocaleString()} / ${sym}${summary.budget.toLocaleString()})`;
+      if (summary.budget > 0) {
+        elemBudget.textContent = `${summary.budgetUsedPercent}% used (${sym}${summary.totalExpense.toLocaleString()} / ${sym}${summary.budget.toLocaleString()})`;
+      } else {
+        elemBudget.textContent = summary.totalIncome > 0 
+          ? `Budget: ${sym}${summary.totalIncome.toLocaleString()} (From Income)`
+          : `${sym}0 set (Add Income to set)`;
+      }
     }
   }
 
@@ -527,6 +586,7 @@ class AppController {
     event.preventDefault();
     const email = document.getElementById('loginEmail').value.trim();
     dataManager.setAuthUser({ isLoggedIn: true, email, name: email.split('@')[0] });
+    this.checkAuthUI();
     this.showToast(`Welcome back, ${email.split('@')[0]}!`, 'success');
     this.switchView('dashboard');
   }
@@ -536,6 +596,7 @@ class AppController {
     const name = document.getElementById('regName').value.trim();
     const email = document.getElementById('regEmail').value.trim();
     dataManager.setAuthUser({ isLoggedIn: true, email, name });
+    this.checkAuthUI();
     this.showToast(`Account created for ${name}!`, 'success');
     this.switchView('dashboard');
   }
@@ -583,16 +644,16 @@ class AppController {
     container.innerHTML = `
       <div class="card-panel">
         <div class="panel-header">
-          <div class="panel-title"><i class="fas fa-user-cog"></i> System Admin Dashboard</div>
-          <span class="tag-method" style="background: var(--primary-bg); color: var(--primary);">System Admin Mode</span>
+          <div class="panel-title"><i class="fas fa-user-cog"></i> System Administration Control</div>
+          <span class="tag-method" style="background: var(--primary-bg); color: var(--primary);">Admin Restricted</span>
         </div>
         <div class="wallets-grid" style="margin-bottom: 1.5rem;">
           <div class="card-panel" style="padding: 1.2rem; margin-bottom: 0;">
-            <div class="metric-title">Total System Transactions</div>
+            <div class="metric-title">System Transactions</div>
             <div class="metric-value">${txs.length}</div>
           </div>
           <div class="card-panel" style="padding: 1.2rem; margin-bottom: 0;">
-            <div class="metric-title">Active Categories</div>
+            <div class="metric-title">Expense Categories</div>
             <div class="metric-value">${categories.length}</div>
           </div>
           <div class="card-panel" style="padding: 1.2rem; margin-bottom: 0;">
@@ -601,7 +662,7 @@ class AppController {
           </div>
         </div>
         <button class="btn btn-secondary" style="color: var(--danger); border-color: var(--danger);" onclick="appController.resetAllAppData()">
-          <i class="fas fa-trash-alt"></i> Reset All App Data to Clean Slate (৳0)
+          <i class="fas fa-trash-alt"></i> Reset System Data to Clean Slate (৳0)
         </button>
       </div>
     `;
