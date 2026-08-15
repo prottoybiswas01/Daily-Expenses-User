@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Daily Expenses & Student Budget Tracker - দৈনন্দিন হিসাব ও ওয়ালেট</title>
   
-  <meta name="description" content="Manage student daily expenses, bKash, Nagad, Bank, and Cash balances with real-time analytics and guardian reference sharing access.">
-  <meta name="keywords" content="Daily Expenses, Student Budget Tracker, bKash, Nagad, Bank, Cash Balance, Expense Tracker">
+  <meta name="description" content="Manage student daily expenses, bKash, Nagad, Bank, and Cash balances with real-time analytics, PDF reports, savings goals, and guardian reference sharing access.">
+  <meta name="keywords" content="Daily Expenses, Student Budget Tracker, bKash, Nagad, Bank, Cash Balance, Expense Tracker, PDF Statement">
   
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="css/styles.css">
@@ -26,7 +26,7 @@
         </div>
       </div>
 
-      <!-- Navigation Links (Admin fully removed from main nav) -->
+      <!-- Navigation Links -->
       <ul class="nav-links" id="mainNavLinks">
         <li>
           <button class="nav-btn active" data-view="home">
@@ -57,7 +57,7 @@
 
       <!-- Header Controls -->
       <div class="header-actions">
-        <!-- Role Switcher (Student / Guardian Observer only - No Admin) -->
+        <!-- Role Switcher -->
         <div class="role-selector" id="roleSelectorBox" title="Switch View Mode" style="display: none;">
           <button class="role-pill active" data-role="student"><i class="fas fa-user-graduate"></i> Student</button>
           <button class="role-pill" data-role="guardian"><i class="fas fa-eye"></i> Observer Mode</button>
@@ -157,9 +157,9 @@
           <div class="feature-icon blue">
             <i class="fas fa-bolt"></i>
           </div>
-          <div class="feature-title">Quick Log Expense Sidebar</div>
+          <div class="feature-title">PDF & CSV Report Export</div>
           <div class="feature-desc">
-            কোনো বাড়তি ক্লিক ছাড়াই সরাসরি ড্যাশবোর্ড থেকে তাৎক্ষণিক চা, বাস ভাড়া ও খাবার খরচ এন্ট্রি নেওয়ার সুবিধা।
+            ১-ক্লিকে যেকোনো সময়ের খরচের হিসাব পিডিএফ বা এক্সেল (CSV) ফাইলে ডাউনলোড বা প্রিন্ট করার সুবিধা।
           </div>
         </div>
       </div>
@@ -230,13 +230,22 @@
           <h1 style="font-family: 'Outfit'; font-size: 1.5rem; font-weight: 700;">Student Dashboard</h1>
           <p style="color: var(--text-muted); font-size: 0.88rem;">Hello <span id="dashUserName">Tanvir</span>, here is your student financial summary & wallet balances.</p>
         </div>
-        <div style="display: flex; align-items: center; gap: 0.5rem; background: var(--bg-card); padding: 0.4rem 0.8rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); font-size: 0.85rem;">
-          <i class="fas fa-coins" style="color: var(--warning);"></i>
-          <span style="font-weight: 600;">Currency:</span>
-          <select id="currencySelect" style="padding: 0.2rem 0.4rem; border: none; background: transparent; font-weight: 700; width: auto;" onchange="appController.currentCurrency = this.value; appController.renderCurrentView();">
-            <option value="৳">BDT (৳ Taka)</option>
-            <option value="$">USD ($ Dollar)</option>
-          </select>
+        
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.82rem;" onclick="appController.handlePrintStatement()">
+            <i class="fas fa-file-pdf" style="color: var(--danger);"></i> Export PDF / Print
+          </button>
+          <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.82rem;" onclick="appController.handleExportCSV()">
+            <i class="fas fa-file-csv" style="color: var(--success);"></i> CSV Excel
+          </button>
+
+          <div style="display: flex; align-items: center; gap: 0.5rem; background: var(--bg-card); padding: 0.4rem 0.8rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); font-size: 0.85rem;">
+            <i class="fas fa-coins" style="color: var(--warning);"></i>
+            <select id="currencySelect" style="padding: 0.2rem 0.4rem; border: none; background: transparent; font-weight: 700; width: auto;" onchange="appController.currentCurrency = this.value; appController.renderCurrentView();">
+              <option value="৳">BDT (৳ Taka)</option>
+              <option value="$">USD ($ Dollar)</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -295,6 +304,28 @@
         
         <!-- Left Main Column: Recent Transactions & Visual Spending Trend -->
         <div>
+          <!-- Quick Monthly Fixed Expenses Template (মেস ভাড়া, বুয়া বিল, ওয়াইফাই) -->
+          <div class="card-panel" style="background: linear-gradient(135deg, rgba(37,99,235,0.05), rgba(99,102,241,0.05)); border: 1px dashed var(--primary);">
+            <div class="panel-header" style="margin-bottom: 0.5rem;">
+              <div class="panel-title" style="font-size: 0.95rem; color: var(--primary);">
+                <i class="fas fa-building"></i> Recurring Hostel & Mess Expenses (মাসিক ফিক্সড খরচ)
+              </div>
+              <span style="font-size: 0.78rem; color: var(--text-muted);">1-Click Quick Log</span>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn btn-secondary" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;" onclick="appController.quickLogRecurring('Hostel Rent (মেস ভাড়া)', 3500, 'cat_hostel', 'bkash')">
+                <i class="fas fa-home" style="color: var(--primary);"></i> ৳3,500 Mess Rent
+              </button>
+              <button class="btn btn-secondary" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;" onclick="appController.quickLogRecurring('WiFi Net Bill (ইন্টারনেট)', 500, 'cat_hostel', 'bkash')">
+                <i class="fas fa-wifi" style="color: var(--warning);"></i> ৳500 WiFi
+              </button>
+              <button class="btn btn-secondary" style="font-size: 0.78rem; padding: 0.35rem 0.65rem;" onclick="appController.quickLogRecurring('Bua & Maid Bill (বুয়া বিল)', 600, 'cat_hostel', 'cash')">
+                <i class="fas fa-user-nurse" style="color: var(--success);"></i> ৳600 Bua Bill
+              </button>
+            </div>
+          </div>
+
           <!-- Spending Trend Chart Card -->
           <div class="card-panel">
             <div class="panel-header">
@@ -364,20 +395,21 @@
             </form>
           </div>
 
+          <!-- Student Savings Goals Card -->
+          <div class="card-panel">
+            <div class="panel-header">
+              <div class="panel-title"><i class="fas fa-piggy-bank" style="color: var(--success);"></i> Savings Target (লক্ষ্যমাত্রা)</div>
+              <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="appController.openSavingsGoalModal()">+ New Goal</button>
+            </div>
+            <div id="savingsGoalsContainer"></div>
+          </div>
+
           <!-- Category Doughnut Breakdown -->
           <div class="card-panel">
             <div class="panel-header">
               <div class="panel-title"><i class="fas fa-chart-pie"></i> Expense Breakdown</div>
             </div>
             <div id="doughnutChartContainer" class="chart-box"></div>
-          </div>
-
-          <!-- Category Distribution Bars -->
-          <div class="card-panel">
-            <div class="panel-header">
-              <div class="panel-title"><i class="fas fa-tasks"></i> Category Distribution</div>
-            </div>
-            <div id="categoryBarsContainer"></div>
           </div>
         </div>
 
@@ -390,9 +422,10 @@
       <div class="card-panel">
         <div class="panel-header">
           <div class="panel-title"><i class="fas fa-list-alt"></i> Complete Transaction History</div>
-          <button class="btn btn-primary" onclick="appController.openAddModal('expense')">
-            <i class="fas fa-plus"></i> New Transaction
-          </button>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-secondary" onclick="appController.handlePrintStatement()"><i class="fas fa-print"></i> Print PDF</button>
+            <button class="btn btn-primary" onclick="appController.openAddModal('expense')"><i class="fas fa-plus"></i> New Transaction</button>
+          </div>
         </div>
 
         <div class="filter-bar">
@@ -414,6 +447,7 @@
       <div class="card-panel">
         <div class="panel-header">
           <div class="panel-title"><i class="fas fa-chart-bar"></i> Visual Expense & Savings Analytics</div>
+          <button class="btn btn-secondary" onclick="appController.handleExportCSV()"><i class="fas fa-download"></i> Export CSV</button>
         </div>
         
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;" class="content-grid">
@@ -439,14 +473,14 @@
       <div id="sharePanelContainer"></div>
     </section>
 
-    <!-- VIEW 6: ISOLATED ADMIN PANEL (Accessible ONLY via URL #admin) -->
+    <!-- VIEW 6: ISOLATED ADMIN PANEL -->
     <section id="view-admin" class="view-section">
       <div id="adminPanelContainer"></div>
     </section>
 
   </main>
 
-  <!-- MOBILE BOTTOM NAVIGATION BAR (No Admin button) -->
+  <!-- MOBILE BOTTOM NAVIGATION BAR -->
   <div class="mobile-bottom-bar">
     <button class="mobile-nav-btn active" data-view="home">
       <i class="fas fa-globe"></i> Home
@@ -463,6 +497,39 @@
     <button class="mobile-nav-btn auth-only-nav" style="display: none;" data-view="share">
       <i class="fas fa-user-shield"></i> Reference
     </button>
+  </div>
+
+  <!-- MODAL: ADD SAVINGS GOAL -->
+  <div id="savingsGoalModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fas fa-piggy-bank" style="color: var(--success);"></i> Add New Savings Target</h3>
+        <button class="close-btn" onclick="appController.closeSavingsGoalModal()"><i class="fas fa-times"></i></button>
+      </div>
+
+      <form onsubmit="appController.handleSaveSavingsGoal(event)">
+        <div class="form-group">
+          <label>Target Goal Name (যেমন: ল্যাপটপ / নতুন কোর্স / বই)</label>
+          <input type="text" id="goalTitleInput" placeholder="e.g. Buying Python Book / Laptop" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Target Amount (৳)</label>
+            <input type="number" id="goalTargetInput" placeholder="e.g. 2000" required>
+          </div>
+          <div class="form-group">
+            <label>Initial Savings (৳)</label>
+            <input type="number" id="goalInitialInput" placeholder="0" value="0">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="appController.closeSavingsGoalModal()">Cancel</button>
+          <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> Create Savings Target</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- MODAL: ADD MONEY / TOP UP TO WALLET & SET BUDGET -->
@@ -509,7 +576,7 @@
     </div>
   </div>
 
-  <!-- MODAL: ADD TRANSACTION WITH WALLET SELECTION -->
+  <!-- MODAL: ADD TRANSACTION -->
   <div id="addTxModal" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   DAILY EXPENSES TRACKER - MAIN APP CONTROLLER (CLEAN ROUTING & ISOLATED ADMIN)
+   DAILY EXPENSES TRACKER - MAIN APP CONTROLLER (SAVINGS & EXPORT INTEGRATION)
    ========================================================================== */
 
 class AppController {
@@ -126,7 +126,6 @@ class AppController {
     this.showToast(`Switched to ${nextTheme === 'dark' ? 'Dark Velvet' : 'Light Luxe'} mode`, 'info');
   }
 
-  // Clear / Reset all data to 0 clean slate
   resetAllAppData() {
     if (confirm('Are you sure you want to clear all data and reset wallet balances to ৳0?')) {
       dataManager.clearAllData();
@@ -153,7 +152,6 @@ class AppController {
   switchView(viewName) {
     const auth = dataManager.getAuthUser();
     
-    // Auth Guard: Require login for Dashboard, Records, Analytics, Share
     if (viewName !== 'home' && viewName !== 'auth' && viewName !== 'admin' && (!auth || !auth.isLoggedIn)) {
       this.showToast('Please login to access the Student Dashboard.', 'info');
       viewName = 'auth';
@@ -161,12 +159,10 @@ class AppController {
 
     this.currentView = viewName;
 
-    // Update active navbar button
     document.querySelectorAll('.nav-btn, .mobile-nav-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.view === viewName);
     });
 
-    // Hide all view sections
     document.querySelectorAll('.view-section').forEach(sec => {
       sec.classList.remove('active');
     });
@@ -191,6 +187,7 @@ class AppController {
       this.renderTransactionList('recentTxList', transactions.slice(0, 6));
       this.renderQuickAddCategories();
       this.renderSpendingTrendChart(transactions);
+      this.renderSavingsGoals();
       analyticsEngine.renderCategoryBars('categoryBarsContainer', transactions, categories, this.currentCurrency);
       analyticsEngine.renderCategoryDoughnut('doughnutChartContainer', transactions, categories, this.currentCurrency);
     } else if (this.currentView === 'transactions') {
@@ -207,7 +204,130 @@ class AppController {
     }
   }
 
-  // Render Vibrant Wallet Cards (bKash, Nagad, Bank, Cash) with Top Up & Pay Action Pills
+  // Render Savings Goals Widget
+  renderSavingsGoals() {
+    const container = document.getElementById('savingsGoalsContainer');
+    if (!container) return;
+
+    const goals = dataManager.getSavingsGoals();
+    if (goals.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 1.2rem; color: var(--text-muted);">
+          <i class="fas fa-bullseye" style="font-size: 1.4rem; opacity: 0.4; margin-bottom: 0.3rem;"></i>
+          <p style="font-size: 0.8rem;">No savings goals set yet.</p>
+          <button class="btn btn-secondary" style="font-size: 0.75rem; margin-top: 0.4rem;" onclick="appController.openSavingsGoalModal()">+ Create Target Goal</button>
+        </div>
+      `;
+      return;
+    }
+
+    const sym = this.currentCurrency;
+    const html = goals.map(g => {
+      const pct = Math.min(100, Math.round((g.currentAmount / (g.targetAmount || 1)) * 100));
+      return `
+        <div style="background: var(--bg-input); padding: 0.75rem; border-radius: var(--radius-md); margin-bottom: 0.6rem;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.25rem;">
+            <span><i class="fas fa-bullseye" style="color: var(--success);"></i> ${g.title}</span>
+            <span style="color: var(--primary);">${sym}${g.currentAmount} / ${sym}${g.targetAmount} (${pct}%)</span>
+          </div>
+          <div style="height: 6px; background: rgba(0,0,0,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 0.4rem;">
+            <div style="height: 100%; width: ${pct}%; background: var(--success); border-radius: 4px;"></div>
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 0.4rem;">
+            <button class="btn btn-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.4rem;" onclick="appController.depositToSavingsGoalPrompt('${g.id}')">+ Add Savings</button>
+            <button class="icon-btn" style="font-size: 0.7rem;" onclick="appController.deleteSavingsGoal('${g.id}')"><i class="fas fa-trash-alt"></i></button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = html;
+  }
+
+  openSavingsGoalModal() {
+    document.getElementById('savingsGoalModal').classList.add('active');
+  }
+
+  closeSavingsGoalModal() {
+    document.getElementById('savingsGoalModal').classList.remove('active');
+  }
+
+  handleSaveSavingsGoal(event) {
+    event.preventDefault();
+    const title = document.getElementById('goalTitleInput').value.trim();
+    const target = parseFloat(document.getElementById('goalTargetInput').value);
+    const initial = parseFloat(document.getElementById('goalInitialInput').value) || 0;
+
+    if (!title || isNaN(target) || target <= 0) {
+      this.showToast('Please enter a target goal title and amount.', 'error');
+      return;
+    }
+
+    dataManager.addSavingsGoal(title, target, initial);
+    this.closeSavingsGoalModal();
+    this.showToast(`Savings Target Created: ${title}!`, 'success');
+    this.renderCurrentView();
+  }
+
+  depositToSavingsGoalPrompt(goalId) {
+    const amtStr = prompt('Enter amount to add to this savings goal (৳):', '500');
+    if (amtStr) {
+      const amt = parseFloat(amtStr);
+      if (!isNaN(amt) && amt > 0) {
+        dataManager.depositToSavingsGoal(goalId, amt);
+        this.showToast(`Added ${this.currentCurrency}${amt} to savings goal!`, 'success');
+        this.renderCurrentView();
+      }
+    }
+  }
+
+  deleteSavingsGoal(goalId) {
+    if (confirm('Delete this savings target?')) {
+      dataManager.deleteSavingsGoal(goalId);
+      this.showToast('Savings target removed.', 'info');
+      this.renderCurrentView();
+    }
+  }
+
+  // 1-Click Quick Recurring Mess Expense Log
+  quickLogRecurring(title, amount, categoryId, walletId) {
+    if (this.currentRole === 'guardian') {
+      this.showToast('Guardian Observer Mode is Read-Only.', 'info');
+      return;
+    }
+
+    const tx = {
+      title,
+      amount,
+      type: 'expense',
+      category: categoryId,
+      walletId,
+      date: new Date().toISOString().split('T')[0],
+      method: walletId.toUpperCase(),
+      note: 'Recurring monthly mess expense',
+      flagged: false
+    };
+
+    dataManager.addTransaction(tx);
+    this.showToast(`Logged Fixed Expense: ${title} (${this.currentCurrency}${amount})`, 'success');
+    this.renderCurrentView();
+  }
+
+  // Export Statement Handlers
+  handleExportCSV() {
+    const transactions = dataManager.getTransactions();
+    analyticsEngine.exportToCSV(transactions);
+    this.showToast('Exported transaction statement as CSV!', 'success');
+  }
+
+  handlePrintStatement() {
+    const transactions = dataManager.getTransactions();
+    const summary = dataManager.getFinancialSummary();
+    const user = dataManager.getAuthUser();
+    analyticsEngine.printStatement(transactions, summary, user);
+  }
+
+  // Render Vibrant Wallet Cards (bKash, Nagad, Bank, Cash)
   renderWalletsSummary() {
     const container = document.getElementById('walletsGridContainer');
     if (!container) return;
@@ -706,7 +826,7 @@ class AppController {
     `;
   }
 
-  // Secret Isolated Admin Panel (Triggered ONLY via #admin or /admin URL)
+  // Secret Isolated Admin Panel
   renderAdminPanel() {
     const container = document.getElementById('adminPanelContainer');
     if (!container) return;

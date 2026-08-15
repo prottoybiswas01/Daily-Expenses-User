@@ -1,5 +1,5 @@
 /* ==========================================================================
-   DAILY EXPENSES TRACKER - DATA MANAGER & WALLET SYSTEM (TOP-UP & BUDGET INTEGRATION)
+   DAILY EXPENSES TRACKER - DATA MANAGER & SAVINGS/DEBT ENGINE
    ========================================================================== */
 
 const STORAGE_KEYS = {
@@ -8,7 +8,9 @@ const STORAGE_KEYS = {
   WALLETS: 'daily_expenses_wallets',
   USER_SETTINGS: 'daily_expenses_settings',
   SHARED_ACCESS: 'daily_expenses_shared_links',
-  AUTH_USER: 'daily_expenses_auth_user'
+  AUTH_USER: 'daily_expenses_auth_user',
+  SAVINGS_GOALS: 'daily_expenses_savings_goals',
+  DEBT_RECORDS: 'daily_expenses_debt_records'
 };
 
 // Initial Clean State: 0 Balance for all Wallets
@@ -26,7 +28,7 @@ const DEFAULT_CATEGORIES = [
   { id: 'cat_tuition', name: 'Tuition & College Fees (বেতন/টিউশন ফি)', type: 'expense', icon: 'fa-graduation-cap', color: '#ec4899' },
   { id: 'cat_hostel', name: 'Hostel & Rent (হোস্টেল/মেস ভাড়া)', type: 'expense', icon: 'fa-building', color: '#8b5cf6' },
   { id: 'cat_books', name: 'Books & Stationery (বই/খাতা)', type: 'expense', icon: 'fa-book-open', color: '#06b6d4' },
-  { id: 'cat_loans', name: 'Loans & Debts (ধার দেওয়া/নেওয়া)', type: 'expense', icon: 'fa-hand-holding-usd', color: '#f43f5e' },
+  { id: 'cat_loans', name: 'Loans & Debts (ধার দেওয়া/নেওয়া)', type: 'expense', icon: 'fa-hand-holding-usd', color: '#f43f5e' },
   { id: 'cat_allowance', name: 'Family Allowance (বাসা থেকে টাকা)', type: 'income', icon: 'fa-wallet', color: '#10b981' },
   { id: 'cat_tuition_income', name: 'Tutoring / Freelance (টিউশনি/ফ্রিল্যান্সিং)', type: 'income', icon: 'fa-laptop-code', color: '#3b82f6' }
 ];
@@ -60,6 +62,12 @@ class DataManager {
     if (!localStorage.getItem(STORAGE_KEYS.AUTH_USER)) {
       localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify({ isLoggedIn: false, email: '', name: '' }));
     }
+    if (!localStorage.getItem(STORAGE_KEYS.SAVINGS_GOALS)) {
+      localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, JSON.stringify([]));
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.DEBT_RECORDS)) {
+      localStorage.setItem(STORAGE_KEYS.DEBT_RECORDS, JSON.stringify([]));
+    }
   }
 
   // Reset all transactions & wallet balances to 0 (Clean Slate)
@@ -67,6 +75,8 @@ class DataManager {
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify([]));
     localStorage.setItem(STORAGE_KEYS.WALLETS, JSON.stringify(CLEAN_WALLETS));
     localStorage.setItem(STORAGE_KEYS.SHARED_ACCESS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.DEBT_RECORDS, JSON.stringify([]));
     
     // Reset budget to 0
     const settings = this.getSettings();
@@ -97,13 +107,11 @@ class DataManager {
     const amt = parseFloat(amount) || 0;
     if (amt <= 0 || !wallets[walletId]) return false;
 
-    // Add amount to wallet balance
     wallets[walletId].balance += amt;
     this.saveWallets(wallets);
 
     const walletNames = { bkash: 'bKash', nagad: 'Nagad', bank: 'Bank Account', cash: 'Cash in Hand' };
 
-    // Record as Income Deposit Transaction
     const tx = {
       id: 'tx_' + Date.now(),
       title: `Deposit / Top Up: ${walletNames[walletId]} (${sourceName})`,
@@ -121,7 +129,6 @@ class DataManager {
     list.unshift(tx);
     this.saveTransactions(list);
 
-    // Update monthly budget if provided
     if (newBudget !== null && !isNaN(newBudget) && newBudget > 0) {
       this.updateSettings({ monthlyBudget: parseFloat(newBudget) });
     }
@@ -129,26 +136,13 @@ class DataManager {
     return true;
   }
 
-  // Direct Wallet Exact Balance Override
-  setWalletBalance(walletId, exactBalance) {
-    const wallets = this.getWallets();
-    const amt = parseFloat(exactBalance) || 0;
-    if (wallets[walletId]) {
-      wallets[walletId].balance = Math.max(0, amt);
-      this.saveWallets(wallets);
-      return true;
-    }
-    return false;
-  }
-
   // Automatic Wallet Balance Update Engine
   addTransaction(tx) {
     const list = this.getTransactions();
-    tx.id = 'tx_' + Date.now(),
+    tx.id = 'tx_' + Date.now();
     list.unshift(tx);
     this.saveTransactions(list);
 
-    // Update wallet balance automatically
     const wallets = this.getWallets();
     const wId = tx.walletId || 'cash';
     if (wallets[wId]) {
@@ -168,7 +162,6 @@ class DataManager {
     let list = this.getTransactions();
     const target = list.find(t => t.id === id);
     if (target) {
-      // Revert wallet balance
       const wallets = this.getWallets();
       const wId = target.walletId || 'cash';
       if (wallets[wId]) {
@@ -198,7 +191,6 @@ class DataManager {
     wallets[toWId].balance += amt;
     this.saveWallets(wallets);
 
-    // Record as transfer transaction
     const tx = {
       id: 'tx_' + Date.now(),
       title: `Transfer: ${wallets[fromWId].name.split(' (')[0]} → ${wallets[toWId].name.split(' (')[0]}`,
@@ -217,6 +209,42 @@ class DataManager {
     this.saveTransactions(list);
 
     return true;
+  }
+
+  // Student Savings Goals Engine
+  getSavingsGoals() {
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.SAVINGS_GOALS)) || [];
+  }
+
+  addSavingsGoal(title, targetAmount, currentAmount = 0) {
+    const list = this.getSavingsGoals();
+    const newGoal = {
+      id: 'goal_' + Date.now(),
+      title,
+      targetAmount: parseFloat(targetAmount) || 0,
+      currentAmount: parseFloat(currentAmount) || 0,
+      dateCreated: new Date().toISOString().split('T')[0]
+    };
+    list.push(newGoal);
+    localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, JSON.stringify(list));
+    return newGoal;
+  }
+
+  depositToSavingsGoal(goalId, amount) {
+    const list = this.getSavingsGoals();
+    const goal = list.find(g => g.id === goalId);
+    if (goal) {
+      goal.currentAmount += parseFloat(amount) || 0;
+      localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, JSON.stringify(list));
+      return true;
+    }
+    return false;
+  }
+
+  deleteSavingsGoal(goalId) {
+    let list = this.getSavingsGoals();
+    list = list.filter(g => g.id !== goalId);
+    localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, JSON.stringify(list));
   }
 
   getCategories() {
