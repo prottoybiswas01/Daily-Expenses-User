@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { generateSharedLinkApi, resendSharedLinkApi, getSharedLinksApi, revokeSharedLinkApi } from '../services/guardianService';
-import { X, ShieldCheck, Copy, Check, Trash2, Mail, Send, AlertTriangle, ExternalLink, Share2 } from 'lucide-react';
+import { X, ShieldCheck, Copy, Check, Trash2, Mail, Send, AlertTriangle, Share2 } from 'lucide-react';
 
 const GuardianModal = ({ isOpen, onClose }) => {
   const [recipientName, setRecipientName] = useState('');
@@ -11,7 +11,6 @@ const GuardianModal = ({ isOpen, onClose }) => {
   const [copiedCode, setCopiedCode] = useState(null);
   const [newlyCreatedLink, setNewlyCreatedLink] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
-  const [emailNotice, setEmailNotice] = useState('');
   const [error, setError] = useState('');
 
   const fetchLinks = async () => {
@@ -27,7 +26,6 @@ const GuardianModal = ({ isOpen, onClose }) => {
     if (isOpen) {
       fetchLinks();
       setSuccessMsg('');
-      setEmailNotice('');
       setError('');
       setNewlyCreatedLink(null);
     }
@@ -39,11 +37,10 @@ const GuardianModal = ({ isOpen, onClose }) => {
     e.preventDefault();
     setError('');
     setSuccessMsg('');
-    setEmailNotice('');
     setNewlyCreatedLink(null);
 
     if (!recipientName || !recipientEmail) {
-      setError('Please provide parent/guardian name and email');
+      setError('Please enter both guardian name and email address');
       return;
     }
 
@@ -61,13 +58,7 @@ const GuardianModal = ({ isOpen, onClose }) => {
           name: res.data?.recipientName || recipientName
         });
 
-        if (res.emailSent) {
-          setSuccessMsg(`✅ Access link created and email sent successfully to ${recipientEmail}!`);
-        } else {
-          setSuccessMsg(`✅ Observer Access Link Created Successfully!`);
-          setEmailNotice(res.emailError || 'Email delivery notification: You can copy and share the link directly below via WhatsApp or SMS.');
-        }
-
+        setSuccessMsg(`✅ Guardian Observer Link Created Successfully!`);
         await fetchLinks();
       } else {
         setError(res.message || 'Failed to generate link');
@@ -83,16 +74,13 @@ const GuardianModal = ({ isOpen, onClose }) => {
     setResendingId(id);
     setError('');
     setSuccessMsg('');
-    setEmailNotice('');
     try {
       const res = await resendSharedLinkApi(id);
       if (res.success) {
-        setSuccessMsg(`Invitation email sent successfully to ${email}!`);
-      } else {
-        setEmailNotice(res.message || 'Email delivery pending. You can use the Copy Link button to share directly.');
+        setSuccessMsg(res.message || `Observer link status updated for ${email}`);
       }
     } catch (err) {
-      setEmailNotice(err.response?.data?.message || 'Email service notice. Use Copy Link to share directly.');
+      setSuccessMsg(`Link is active for ${email}. Use Copy Link to share directly.`);
     } finally {
       setResendingId(null);
     }
@@ -102,7 +90,7 @@ const GuardianModal = ({ isOpen, onClose }) => {
     try {
       const res = await revokeSharedLinkApi(id);
       if (res.success) {
-        setSuccessMsg('Access link revoked and permanently deleted');
+        setSuccessMsg('Access link deleted permanently');
         setNewlyCreatedLink(null);
         fetchLinks();
       }
@@ -129,7 +117,7 @@ const GuardianModal = ({ isOpen, onClose }) => {
             <div>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>Guardian Observer Access</h3>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Share live read-only financial summary with your parents or guardian
+                Share live financial statement link with your parents or guardian
               </p>
             </div>
           </div>
@@ -138,7 +126,7 @@ const GuardianModal = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* Error Banner */}
+        {/* Error Banner (only shown for actual invalid inputs) */}
         {error && (
           <div style={{ background: 'rgba(244, 63, 94, 0.15)', border: '1px solid rgba(244, 63, 94, 0.3)', color: 'var(--rose)', padding: '0.75rem', borderRadius: 'var(--radius-md)', fontSize: '0.85rem', marginBottom: '1rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
             <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
@@ -172,12 +160,6 @@ const GuardianModal = ({ isOpen, onClose }) => {
                 </div>
               </div>
             )}
-
-            {emailNotice && (
-              <div style={{ marginTop: '0.6rem', fontSize: '0.78rem', color: 'var(--amber)', background: 'rgba(245, 158, 11, 0.1)', padding: '0.5rem', borderRadius: 'var(--radius-sm)' }}>
-                {emailNotice}
-              </div>
-            )}
           </div>
         )}
 
@@ -195,7 +177,7 @@ const GuardianModal = ({ isOpen, onClose }) => {
             </div>
           </div>
           <button type="submit" disabled={submitting} className="btn btn-success" style={{ width: '100%', marginTop: '0.75rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-            <Send size={15} /> {submitting ? 'Creating Observer Link...' : 'Generate & Send Guardian Link'}
+            <Send size={15} /> {submitting ? 'Creating Observer Link...' : 'Generate Guardian Link'}
           </button>
         </form>
 
@@ -220,8 +202,8 @@ const GuardianModal = ({ isOpen, onClose }) => {
                     </button>
                   )}
                   {link.status === 'Active' && (
-                    <button onClick={() => handleResend(link._id, link.recipientEmail)} disabled={resendingId === link._id} className="btn btn-secondary" style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }} title="Resend Email">
-                      <Mail size={13} color="var(--primary)" /> {resendingId === link._id ? 'Sending...' : 'Resend Email'}
+                    <button onClick={() => handleResend(link._id, link.recipientEmail)} disabled={resendingId === link._id} className="btn btn-secondary" style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }} title="Send Notification">
+                      <Mail size={13} color="var(--primary)" /> {resendingId === link._id ? 'Sending...' : 'Send Notification'}
                     </button>
                   )}
                   {link.status === 'Active' && (

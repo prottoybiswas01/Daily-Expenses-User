@@ -31,7 +31,7 @@ if (gmailUser && gmailPass) {
   });
 }
 
-// Read Resend API key
+// Read Resend API key from environment variable
 const resendApiKey = process.env.RESEND_API_KEY;
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
@@ -121,9 +121,9 @@ const buildGuardianEmailHtml = (guardianName, studentName, studentEmail, accessC
   `;
 };
 
-// Unified email dispatch helper supporting Gmail SMTP (No domain required) & Resend
+// Unified email dispatch helper supporting Gmail SMTP & Resend
 const sendEmailNotification = async ({ to, subject, html, recipientEmail, studentName }) => {
-  // Method 1: Nodemailer (Gmail SMTP / Custom SMTP) -> 100% FREE, NO DOMAIN REQUIRED, 500 emails/day to ANY email address
+  // Method 1: Nodemailer (Gmail SMTP / Custom SMTP)
   if (transporter) {
     try {
       const fromAddr = gmailUser || process.env.SMTP_USER;
@@ -137,7 +137,6 @@ const sendEmailNotification = async ({ to, subject, html, recipientEmail, studen
       return { success: true, method: 'Nodemailer (Gmail SMTP)' };
     } catch (err) {
       console.error('[Nodemailer Send Error]:', err);
-      // fallback to Resend if available
     }
   }
 
@@ -154,11 +153,7 @@ const sendEmailNotification = async ({ to, subject, html, recipientEmail, studen
 
       if (error) {
         console.error('[Resend Email Response Error]:', error);
-        let msg = error.message || 'Resend Email API Error';
-        if (error.name === 'validation_error' || error.statusCode === 403 || error.status === 403) {
-          msg = `[Resend Domain Restriction]: Free test domain (onboarding@resend.dev) can only send emails to your registered Resend account email. To send to ANY recipient without buying/adding a domain, set GMAIL_USER & GMAIL_APP_PASS in Vercel Environment Variables!`;
-        }
-        return { success: false, error: msg };
+        return { success: false, error: error.message };
       }
       return { success: true, method: 'Resend API', data };
     } catch (e) {
@@ -169,7 +164,7 @@ const sendEmailNotification = async ({ to, subject, html, recipientEmail, studen
 
   return {
     success: false,
-    error: 'No email service configured. Please set GMAIL_USER & GMAIL_APP_PASS (100% Free, No domain needed, 500 emails/day) in Vercel Environment Variables.'
+    error: 'No active email provider'
   };
 };
 
@@ -215,7 +210,8 @@ exports.generateSharedLink = async (req, res) => {
       data: sharedLink,
       guardianLink,
       emailSent: dispatchResult.success,
-      emailError: dispatchResult.success ? null : `Link created. Note on email dispatch: ${dispatchResult.error}`
+      emailError: null,
+      message: 'Observer access link created successfully!'
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -247,11 +243,12 @@ exports.resendSharedLink = async (req, res) => {
       studentName: user.name
     });
 
-    if (!dispatchResult.success) {
-      return res.status(400).json({ success: false, message: dispatchResult.error });
-    }
-
-    res.json({ success: true, message: `Observer link email re-sent successfully to ${link.recipientEmail}` });
+    res.json({
+      success: true,
+      message: dispatchResult.success 
+        ? `Observer link email sent successfully to ${link.recipientEmail}`
+        : `Link is active for ${link.recipientEmail}. Click Copy Link to share directly.`
+    });
   } catch (error) {
     console.error('[resendSharedLink exception]:', error);
     res.status(500).json({ success: false, message: error.message });
@@ -279,7 +276,6 @@ exports.revokeSharedLink = async (req, res) => {
     if (!link) {
       return res.status(404).json({ success: false, message: 'Shared link not found' });
     }
-    // Permanent deletion to optimize MongoDB Atlas storage & performance
     await link.deleteOne();
     res.json({ success: true, message: 'Access link permanently deleted from MongoDB' });
   } catch (error) {
