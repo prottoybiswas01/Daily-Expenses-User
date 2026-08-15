@@ -1,3 +1,4 @@
+const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
 const SharedLink = require('../models/SharedLink');
 const Transaction = require('../models/Transaction');
@@ -5,10 +6,34 @@ const Wallet = require('../models/Wallet');
 const User = require('../models/User');
 const connectDB = require('../config/db');
 
-// Read key safely from environment variables (prevents GitHub Push Protection secret scanning error)
+// Read Nodemailer / Gmail SMTP environment variables
+const gmailUser = process.env.GMAIL_USER || process.env.EMAIL_USER;
+const gmailPass = process.env.GMAIL_APP_PASS || process.env.EMAIL_PASS;
+
+let transporter = null;
+if (gmailUser && gmailPass) {
+  transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: gmailUser,
+      pass: gmailPass
+    }
+  });
+} else if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+  transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    }
+  });
+}
+
+// Read Resend API key
 const resendApiKey = process.env.RESEND_API_KEY;
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
-const senderEmail = process.env.SENDER_EMAIL || 'onboarding@resend.dev';
 
 // Helper to dynamically derive base client URL under any custom domain / hosting setup
 const getClientBaseUrl = (req) => {
@@ -89,14 +114,66 @@ const buildGuardianEmailHtml = (guardianName, studentName, studentEmail, accessC
         <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 28px 0;" />
 
         <div style="text-align: center; font-size: 12px; color: #6b7280;">
-          <p style="margin: 0;">This email was sent automatically by Daily Expenses & Student Budget Tracker via Resend API.</p>
+          <p style="margin: 0;">This email was sent automatically by Daily Expenses & Student Budget Tracker.</p>
         </div>
       </div>
     </div>
   `;
 };
 
-// @desc    Generate a new Guardian Observer access code & Send Email via Resend
+// Unified email dispatch helper supporting Gmail SMTP (No domain required) & Resend
+const sendEmailNotification = async ({ to, subject, html, recipientEmail, studentName }) => {
+  // Method 1: Nodemailer (Gmail SMTP / Custom SMTP) -> 100% FREE, NO DOMAIN REQUIRED, 500 emails/day to ANY email address
+  if (transporter) {
+    try {
+      const fromAddr = gmailUser || process.env.SMTP_USER;
+      const info = await transporter.sendMail({
+        from: `"${studentName} via Daily Expenses" <${fromAddr}>`,
+        to,
+        subject,
+        html
+      });
+      console.log('[Nodemailer Sent Success]:', info.messageId);
+      return { success: true, method: 'Nodemailer (Gmail SMTP)' };
+    } catch (err) {
+      console.error('[Nodemailer Send Error]:', err);
+      // fallback to Resend if available
+    }
+  }
+
+  // Method 2: Resend API Key
+  if (resend) {
+    try {
+      const sender = process.env.SENDER_EMAIL || 'onboarding@resend.dev';
+      const { data, error } = await resend.emails.send({
+        from: sender,
+        to,
+        subject,
+        html
+      });
+
+      if (error) {
+        console.error('[Resend Email Response Error]:', error);
+        let msg = error.message || 'Resend Email API Error';
+        if (error.name === 'validation_error' || error.statusCode === 403 || error.status === 403) {
+          msg = `[Resend Domain Restriction]: Free test domain (onboarding@resend.dev) can only send emails to your registered Resend account email. To send to ANY recipient without buying/adding a domain, set GMAIL_USER & GMAIL_APP_PASS in Vercel Environment Variables!`;
+        }
+        return { success: false, error: msg };
+      }
+      return { success: true, method: 'Resend API', data };
+    } catch (e) {
+      console.error('[Resend Send Catch Exception]:', e);
+      return { success: false, error: e.message };
+    }
+  }
+
+  return {
+    success: false,
+    error: 'No email service configured. Please set GMAIL_USER & GMAIL_APP_PASS (100% Free, No domain needed, 500 emails/day) in Vercel Environment Variables.'
+  };
+};
+
+// @desc    Generate a new Guardian Observer access code & Send Email
 // @route   POST /api/guardian/generate
 exports.generateSharedLink = async (req, res) => {
   try {
@@ -122,51 +199,30 @@ exports.generateSharedLink = async (req, res) => {
     const baseUrl = getClientBaseUrl(req);
     const guardianLink = `${baseUrl}/guardian-view/${accessCode}`;
 
-    let emailSent = false;
-    let emailError = null;
+    const subject = `[Guardian Observer] Financial Statement Access from ${user.name}`;
+    const html = buildGuardianEmailHtml(recipientName, user.name, user.email, accessCode, guardianLink);
 
-    if (resend) {
-      try {
-        const { data, error } = await resend.emails.send({
-          from: senderEmail,
-          to: recipientEmail,
-          subject: `[Guardian Observer] Financial Statement Access from ${user.name}`,
-          html: buildGuardianEmailHtml(recipientName, user.name, user.email, accessCode, guardianLink)
-        });
-
-        if (error) {
-          console.error('[Resend Email Response Error]:', error);
-          let msg = error.message || 'Resend Email API Error';
-          if (error.name === 'validation_error' || error.statusCode === 403 || error.status === 403) {
-            msg = `[Resend 403 Forbidden]: Free testing domain (onboarding@resend.dev) can only send emails to your registered Resend account email. To send to ${recipientEmail}, please add & verify your domain at resend.com/domains.`;
-          }
-          emailError = msg;
-        } else {
-          console.log('[Resend Email Sent Success]:', data);
-          emailSent = true;
-        }
-      } catch (e) {
-        console.error('[Resend Email Send Catch Exception]:', e);
-        emailError = e.message;
-      }
-    } else {
-      console.warn('[Resend]: RESEND_API_KEY environment variable is not configured');
-      emailError = 'RESEND_API_KEY environment variable is missing on Vercel backend.';
-    }
+    const dispatchResult = await sendEmailNotification({
+      to: recipientEmail,
+      subject,
+      html,
+      recipientEmail,
+      studentName: user.name
+    });
 
     res.status(201).json({
       success: true,
       data: sharedLink,
       guardianLink,
-      emailSent,
-      emailError: emailError ? `Link created. Note on email dispatch: ${emailError}` : null
+      emailSent: dispatchResult.success,
+      emailError: dispatchResult.success ? null : `Link created. Note on email dispatch: ${dispatchResult.error}`
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// @desc    Re-send Guardian access link email via Resend
+// @desc    Re-send Guardian access link email
 // @route   POST /api/guardian/resend/:id
 exports.resendSharedLink = async (req, res) => {
   try {
@@ -176,28 +232,23 @@ exports.resendSharedLink = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Shared link not found' });
     }
 
-    if (!resend) {
-      return res.status(400).json({ success: false, message: 'RESEND_API_KEY environment variable is missing on server' });
-    }
-
     const user = await User.findById(req.user._id);
     const baseUrl = getClientBaseUrl(req);
     const guardianLink = `${baseUrl}/guardian-view/${link.accessCode}`;
 
-    const { data, error } = await resend.emails.send({
-      from: senderEmail,
+    const subject = `[Guardian Observer] Financial Statement Access from ${user.name}`;
+    const html = buildGuardianEmailHtml(link.recipientName, user.name, user.email, link.accessCode, guardianLink);
+
+    const dispatchResult = await sendEmailNotification({
       to: link.recipientEmail,
-      subject: `[Guardian Observer] Financial Statement Access from ${user.name}`,
-      html: buildGuardianEmailHtml(link.recipientName, user.name, user.email, link.accessCode, guardianLink)
+      subject,
+      html,
+      recipientEmail: link.recipientEmail,
+      studentName: user.name
     });
 
-    if (error) {
-      console.error('[resendSharedLink error]:', error);
-      let msg = error.message || 'Resend API Error';
-      if (error.name === 'validation_error' || error.statusCode === 403 || error.status === 403) {
-        msg = `Resend 403 Forbidden: Free test domain (onboarding@resend.dev) can only send emails to your registered Resend account address. To send emails to ${link.recipientEmail}, verify a domain at resend.com/domains.`;
-      }
-      return res.status(400).json({ success: false, message: msg });
+    if (!dispatchResult.success) {
+      return res.status(400).json({ success: false, message: dispatchResult.error });
     }
 
     res.json({ success: true, message: `Observer link email re-sent successfully to ${link.recipientEmail}` });
