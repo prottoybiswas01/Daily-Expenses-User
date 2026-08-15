@@ -9,6 +9,41 @@ const connectDB = require('../config/db');
 const resendApiKey = process.env.RESEND_API_KEY;
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
+// Helper to dynamically derive base client URL under any custom domain / hosting setup
+const getClientBaseUrl = (req) => {
+  if (process.env.CLIENT_URL) {
+    return process.env.CLIENT_URL.replace(/\/$/, '');
+  }
+  if (process.env.APP_URL) {
+    return process.env.APP_URL.replace(/\/$/, '');
+  }
+  if (process.env.CUSTOM_DOMAIN) {
+    return process.env.CUSTOM_DOMAIN.replace(/\/$/, '');
+  }
+
+  if (req.headers.origin) {
+    return req.headers.origin.replace(/\/$/, '');
+  }
+  if (req.headers.referer) {
+    try {
+      const refUrl = new URL(req.headers.referer);
+      return refUrl.origin.replace(/\/$/, '');
+    } catch (e) {
+      // ignore invalid referer parsing
+    }
+  }
+
+  // Fallback to host headers (works seamlessly with custom domains on Vercel, cPanel, Nginx, Cloudflare)
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  const protocol = req.headers['x-forwarded-proto'] || (req.connection && req.connection.encrypted ? 'https' : 'http');
+
+  if (host) {
+    return `${protocol}://${host}`.replace(/\/$/, '');
+  }
+
+  return 'http://localhost:5173';
+};
+
 // Helper function to build email HTML
 const buildGuardianEmailHtml = (guardianName, studentName, studentEmail, accessCode, guardianLink) => {
   return `
@@ -84,9 +119,9 @@ exports.generateSharedLink = async (req, res) => {
 
     const user = await User.findById(req.user._id);
 
-    // Build the public guardian viewer link URL
-    const origin = req.headers.origin || req.headers.referer || 'https://daily-expenses-user.vercel.app';
-    const guardianLink = `${origin.replace(/\/$/, '')}/guardian-view/${accessCode}`;
+    // Build the public guardian viewer link URL using dynamic origin detection (custom domain safe)
+    const baseUrl = getClientBaseUrl(req);
+    const guardianLink = `${baseUrl}/guardian-view/${accessCode}`;
 
     let emailSent = false;
     let emailError = null;
@@ -135,8 +170,8 @@ exports.resendSharedLink = async (req, res) => {
     }
 
     const user = await User.findById(req.user._id);
-    const origin = req.headers.origin || req.headers.referer || 'https://daily-expenses-user.vercel.app';
-    const guardianLink = `${origin.replace(/\/$/, '')}/guardian-view/${link.accessCode}`;
+    const baseUrl = getClientBaseUrl(req);
+    const guardianLink = `${baseUrl}/guardian-view/${link.accessCode}`;
 
     await resend.emails.send({
       from: 'onboarding@resend.dev',
