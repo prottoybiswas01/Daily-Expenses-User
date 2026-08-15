@@ -58,7 +58,7 @@ const HomePage = ({ onOpenTopUp, onOpenTransfer, onOpenTransaction, setInitialTr
         {summary.budget > 0 && (
           <div style={{ marginTop: '1.5rem', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>
-              <span>Monthly Budget Utilization (৳ {summary.totalExpense.toLocaleString()} / ৳ {summary.budget.toLocaleString()})</span>
+              <span>Allowance & Income Pool Utilization (৳ {summary.totalExpense.toLocaleString()} spent of ৳ {summary.budget.toLocaleString()} received)</span>
               <span style={{ color: summary.budgetUsedPercent > 85 ? 'var(--rose)' : 'var(--emerald)' }}>{summary.budgetUsedPercent}% Used</span>
             </div>
             <div style={{ width: '100%', height: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>

@@ -5,12 +5,10 @@ import { X, PlusCircle } from 'lucide-react';
 
 const TopUpModal = ({ isOpen, onClose }) => {
   const { topUpWallet } = useFinancial();
-  const { user } = useAuth();
   
   const [walletId, setWalletId] = useState('bkash');
   const [amount, setAmount] = useState('');
-  const [sourceName, setSourceName] = useState('Monthly Family Allowance');
-  const [newBudget, setNewBudget] = useState(user?.monthlyBudget || '');
+  const [sourceName, setSourceName] = useState('Family Allowance / Tuition');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -30,8 +28,7 @@ const TopUpModal = ({ isOpen, onClose }) => {
       const res = await topUpWallet({
         walletId,
         amount: amt,
-        sourceName,
-        newBudget: newBudget ? parseFloat(newBudget) : undefined
+        sourceName
       });
       if (res.success) {
         setAmount('');
@@ -52,7 +49,7 @@ const TopUpModal = ({ isOpen, onClose }) => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <PlusCircle color="var(--emerald)" size={22} />
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Add Money / Top Up</h3>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Add Money / Add Allowance</h3>
           </div>
           <button onClick={onClose} className="btn btn-secondary" style={{ padding: '0.4rem' }}>
             <X size={18} />
@@ -84,11 +81,6 @@ const TopUpModal = ({ isOpen, onClose }) => {
           <div className="form-group">
             <label className="form-label">Source / Reason</label>
             <input type="text" placeholder="e.g. Allowance from Abba, Tuition Fee, Freelancing" value={sourceName} onChange={(e) => setSourceName(e.target.value)} className="form-input" required />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Update Monthly Budget (Optional)</label>
-            <input type="number" placeholder="Set target monthly spending budget" value={newBudget} onChange={(e) => setNewBudget(e.target.value)} className="form-input" />
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>

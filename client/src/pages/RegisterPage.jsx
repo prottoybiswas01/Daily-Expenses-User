@@ -10,7 +10,6 @@ const RegisterPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [monthlyBudget, setMonthlyBudget] = useState('15000');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -20,7 +19,7 @@ const RegisterPage = () => {
     setLoading(true);
 
     try {
-      const res = await register({ name, email, password, monthlyBudget });
+      const res = await register({ name, email, password });
       if (res.success) {
         navigate('/');
       } else {
@@ -66,11 +65,6 @@ const RegisterPage = () => {
           <div className="form-group">
             <label className="form-label">Password</label>
             <input type="password" placeholder="Min. 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} className="form-input" required />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Estimated Monthly Budget Target (৳ BDT)</label>
-            <input type="number" placeholder="15000" value={monthlyBudget} onChange={(e) => setMonthlyBudget(e.target.value)} className="form-input" required />
           </div>
 
           <button type="submit" disabled={loading} className="btn btn-success" style={{ width: '100%', marginTop: '1rem', padding: '0.85rem' }}>
