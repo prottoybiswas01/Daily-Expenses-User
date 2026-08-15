@@ -15,7 +15,7 @@ const DEFAULT_WALLETS = [
 exports.getWallets = async (req, res) => {
   try {
     await connectDB();
-    let wallets = await Wallet.find({ userId: req.user._id });
+    let wallets = await Wallet.find({ userId: req.user._id }).lean();
 
     // If user has no wallets, create defaults
     if (wallets.length === 0) {

@@ -29,7 +29,7 @@ exports.getTransactions = async (req, res) => {
       ];
     }
 
-    const transactions = await Transaction.find(query).sort({ date: -1, createdAt: -1 });
+    const transactions = await Transaction.find(query).sort({ date: -1, createdAt: -1 }).lean();
 
     res.json({ success: true, count: transactions.length, data: transactions });
   } catch (error) {
