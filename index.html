@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="bn" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Expenses & Student Budget Tracker - দৈনন্দিন হিসাব ও ওয়ালেট</title>
+  
+  <meta name="description" content="Manage student daily expenses, bKash, Nagad, Bank, and Cash balances with real-time analytics and guardian reference sharing access.">
+  <meta name="keywords" content="Daily Expenses, Student Budget Tracker, bKash, Nagad, Bank, Cash Balance, Expense Tracker">
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Sticky Header Bar -->
+  <header class="app-header">
+    <div class="header-container">
+      
+      <!-- Brand Logo -->
+      <div class="brand-logo" onclick="appController.switchView('dashboard')" style="cursor: pointer;">
+        <i class="fas fa-wallet"></i>
+        <div>
+          <span>Daily Expenses</span>
+          <span class="brand-tag">Student & Wallets Edition</span>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <ul class="nav-links">
+        <li>
+          <button class="nav-btn active" data-view="dashboard">
+            <i class="fas fa-home"></i> Dashboard
+          </button>
+        </li>
+        <li>
+          <button class="nav-btn" data-view="transactions">
+            <i class="fas fa-list-ul"></i> All Records
+          </button>
+        </li>
+        <li>
+          <button class="nav-btn" data-view="analytics">
+            <i class="fas fa-chart-pie"></i> Analytics
+          </button>
+        </li>
+        <li>
+          <button class="nav-btn" data-view="share">
+            <i class="fas fa-user-shield"></i> Reference / Guardian
+          </button>
+        </li>
+        <li>
+          <button class="nav-btn" data-view="admin">
+            <i class="fas fa-cog"></i> Admin
+          </button>
+        </li>
+      </ul>
+
+      <!-- Header Controls -->
+      <div class="header-actions">
+        <!-- Role Switcher -->
+        <div class="role-selector" title="Switch View Mode">
+          <button class="role-pill active" data-role="student"><i class="fas fa-user-graduate"></i> Student</button>
+          <button class="role-pill" data-role="guardian"><i class="fas fa-eye"></i> Guardian</button>
+          <button class="role-pill" data-role="admin"><i class="fas fa-shield-alt"></i> Admin</button>
+        </div>
+
+        <button class="btn btn-primary" onclick="appController.openAddModal('expense')">
+          <i class="fas fa-plus"></i> <span>Log Expense</span>
+        </button>
+
+        <button class="icon-btn" id="themeToggleBtn" title="Toggle Theme">
+          <i class="fas fa-moon"></i>
+        </button>
+
+        <button class="icon-btn" onclick="appController.switchView('auth')" title="Login / Profile">
+          <i class="fas fa-user"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main Content Wrapper -->
+  <main class="main-wrapper">
+
+    <!-- Guardian Review Notice -->
+    <div id="roleGuardianNotice" class="guardian-badge-banner" style="display: none;">
+      <div>
+        <h3><i class="fas fa-eye"></i> Guardian Observer Review Mode</h3>
+        <p>Viewing real-time student expenditure records for Tanvir Hossain. Access is set to Read-Only Reviewer.</p>
+      </div>
+      <button class="btn btn-secondary" onclick="appController.switchRole('student')">Return to Student View</button>
+    </div>
+
+    <!-- VIEW 0: AUTHENTICATION (LOGIN & REGISTRATION) -->
+    <section id="view-auth" class="view-section">
+      <div class="auth-container">
+        <div class="auth-header">
+          <h2 style="font-family: 'Outfit'; font-size: 1.6rem; margin-bottom: 0.25rem;">Daily Expenses Access</h2>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Login or Create a Student Account</p>
+        </div>
+
+        <div class="auth-tabs">
+          <button class="auth-tab-btn active" id="tabLoginBtn" onclick="document.getElementById('loginForm').style.display='block'; document.getElementById('regForm').style.display='none'; this.classList.add('active'); document.getElementById('tabRegBtn').classList.remove('active');">Login</button>
+          <button class="auth-tab-btn" id="tabRegBtn" onclick="document.getElementById('loginForm').style.display='none'; document.getElementById('regForm').style.display='block'; this.classList.add('active'); document.getElementById('tabLoginBtn').classList.remove('active');">Register</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="loginForm" onsubmit="appController.handleLogin(event)">
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="loginEmail" value="tanvir.cs@university.edu" required>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" value="••••••••" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+            <i class="fas fa-sign-in-alt"></i> Login to Account
+          </button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="regForm" onsubmit="appController.handleRegister(event)" style="display: none;">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="regName" placeholder="Tanvir Hossain" required>
+          </div>
+          <div class="form-group">
+            <label>Student Email</label>
+            <input type="email" id="regEmail" placeholder="student@university.edu" required>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" placeholder="Create password" required>
+          </div>
+          <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 1rem;">
+            <i class="fas fa-user-plus"></i> Create Account
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- VIEW 1: DASHBOARD -->
+    <section id="view-dashboard" class="view-section active">
+      
+      <!-- Welcome Banner -->
+      <div class="dashboard-banner">
+        <div class="banner-welcome">
+          <h1>Welcome, Tanvir! 👋</h1>
+          <p>Real-time Student Budget, Wallets (bKash, Nagad, Bank, Cash) & Daily Expenses.</p>
+        </div>
+        <div class="currency-selector">
+          <i class="fas fa-coins" style="color: var(--warning);"></i>
+          <span style="font-weight: 600; font-size: 0.85rem;">Currency:</span>
+          <select id="currencySelect" onchange="appController.currentCurrency = this.value; appController.renderCurrentView();">
+            <option value="৳">BDT (৳ Taka)</option>
+            <option value="$">USD ($ Dollar)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- WALLET BALANCES SECTION (bKash, Nagad, Bank, Cash) -->
+      <div class="wallets-section-title">
+        <span><i class="fas fa-wallet" style="color: var(--primary);"></i> My Wallets & Accounts (এক্সেস ওয়ালেট ব্যালেন্স)</span>
+        <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="appController.openTransferModal()">
+          <i class="fas fa-exchange-alt"></i> Transfer Between Wallets
+        </button>
+      </div>
+
+      <div id="walletsGridContainer" class="wallets-grid"></div>
+
+      <!-- FINANCIAL OVERVIEW CARDS -->
+      <div class="metrics-grid" style="margin-bottom: 1.8rem;">
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-title">Total Monthly Income</span>
+            <div class="metric-icon income"><i class="fas fa-arrow-down"></i></div>
+          </div>
+          <div class="metric-value" id="metricIncome">৳0</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-title">Total Monthly Expenses</span>
+            <div class="metric-icon expense"><i class="fas fa-arrow-up"></i></div>
+          </div>
+          <div class="metric-value" id="metricExpense">৳0</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-title">Total Net Liquidity</span>
+            <div class="metric-icon balance"><i class="fas fa-wallet"></i></div>
+          </div>
+          <div class="metric-value" id="metricBalance">৳0</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-title">Monthly Budget Status</span>
+            <div class="metric-icon budget"><i class="fas fa-bullseye"></i></div>
+          </div>
+          <div class="metric-value" id="metricBudget">0%</div>
+        </div>
+      </div>
+
+      <!-- Content Split Grid -->
+      <div class="content-grid">
+        
+        <!-- Left Side: Recent Transactions -->
+        <div class="card-panel">
+          <div class="panel-header">
+            <div class="panel-title"><i class="fas fa-history"></i> Recent Transactions</div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn btn-success" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="appController.openAddModal('income')">
+                <i class="fas fa-plus-circle"></i> Add Income
+              </button>
+              <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="appController.switchView('transactions')">View All</button>
+            </div>
+          </div>
+
+          <div class="filter-bar">
+            <div class="search-box">
+              <i class="fas fa-search"></i>
+              <input type="text" placeholder="Search (Bus, Hostel, bKash, Tea...)" oninput="appController.handleSearchInput(this.value)">
+            </div>
+          </div>
+
+          <div id="recentTxList" class="transaction-list"></div>
+        </div>
+
+        <!-- Right Side: Analytics Charts -->
+        <div>
+          <div class="card-panel">
+            <div class="panel-header">
+              <div class="panel-title"><i class="fas fa-chart-pie"></i> Expense Breakdown</div>
+            </div>
+            <div id="doughnutChartContainer" class="chart-box"></div>
+          </div>
+
+          <div class="card-panel">
+            <div class="panel-header">
+              <div class="panel-title"><i class="fas fa-tasks"></i> Category Distribution</div>
+            </div>
+            <div id="categoryBarsContainer"></div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- VIEW 2: TRANSACTIONS RECORD LIST -->
+    <section id="view-transactions" class="view-section">
+      <div class="card-panel">
+        <div class="panel-header">
+          <div class="panel-title"><i class="fas fa-list-alt"></i> Complete Transaction History</div>
+          <button class="btn btn-primary" onclick="appController.openAddModal('expense')">
+            <i class="fas fa-plus"></i> New Transaction
+          </button>
+        </div>
+
+        <div class="filter-bar">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Search title or notes..." oninput="appController.handleSearchInput(this.value)">
+          </div>
+          <div style="min-width: 180px;">
+            <select id="filterCategorySelect" onchange="appController.handleCategoryFilter(this.value)"></select>
+          </div>
+        </div>
+
+        <div id="fullTxList" class="transaction-list"></div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: ANALYTICS -->
+    <section id="view-analytics" class="view-section">
+      <div class="card-panel">
+        <div class="panel-header">
+          <div class="panel-title"><i class="fas fa-chart-bar"></i> Visual Expense & Savings Analytics</div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;" class="content-grid">
+          <div>
+            <h4 style="margin-bottom: 1rem;">Category Allocation</h4>
+            <div id="fullDoughnutChart" style="height: 280px;"></div>
+          </div>
+          <div>
+            <h4 style="margin-bottom: 1rem;">Spending Distribution</h4>
+            <div id="fullCategoryBars"></div>
+          </div>
+        </div>
+
+        <div style="margin-top: 2rem;">
+          <h4 style="margin-bottom: 1rem;">Monthly Insights & Key Highlights</h4>
+          <div id="analyticsSummaryBox"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 4: SHARE / GUARDIAN REFERENCE -->
+    <section id="view-share" class="view-section">
+      <div id="sharePanelContainer"></div>
+    </section>
+
+    <!-- VIEW 5: ADMIN PANEL -->
+    <section id="view-admin" class="view-section">
+      <div id="adminPanelContainer"></div>
+    </section>
+
+  </main>
+
+  <!-- MOBILE BOTTOM NAVIGATION BAR -->
+  <div class="mobile-bottom-bar">
+    <button class="mobile-nav-btn active" data-view="dashboard">
+      <i class="fas fa-home"></i> Dashboard
+    </button>
+    <button class="mobile-nav-btn" data-view="transactions">
+      <i class="fas fa-list-ul"></i> Records
+    </button>
+    <button class="mobile-nav-btn" data-view="analytics">
+      <i class="fas fa-chart-pie"></i> Analytics
+    </button>
+    <button class="mobile-nav-btn" data-view="share">
+      <i class="fas fa-user-shield"></i> Reference
+    </button>
+  </div>
+
+  <!-- MODAL: ADD TRANSACTION WITH WALLET SELECTION -->
+  <div id="addTxModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTxTitle">Add New Record</h3>
+        <button class="close-btn" onclick="appController.closeAddModal()"><i class="fas fa-times"></i></button>
+      </div>
+
+      <form id="txForm" onsubmit="appController.handleSaveTransaction(event)">
+        <input type="hidden" id="txType" value="expense">
+
+        <div class="form-group">
+          <label>Title / Description (খরচের শিরোনাম)</label>
+          <input type="text" id="txTitleInput" placeholder="e.g. Bus Fare, Lunch, Hostel Rent..." required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Amount (পরিমাণ)</label>
+            <input type="number" id="txAmountInput" step="0.01" placeholder="0.00" required>
+          </div>
+          <div class="form-group">
+            <label>Category (ক্যাটাগরি)</label>
+            <select id="txCategory" required></select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Paid From / Deposit To Wallet (ওয়ালেট)</label>
+            <select id="txWalletSelect" required>
+              <option value="bkash">bKash (বিকাশ)</option>
+              <option value="nagad">Nagad (নগদ)</option>
+              <option value="bank">Bank (ব্যাংক)</option>
+              <option value="cash" selected>Cash (নগদ ক্যাশ)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Date (তারিখ)</label>
+            <input type="date" id="txDate" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Notes / Remarks (ঐচ্ছিক নোট)</label>
+          <textarea id="txNoteInput" rows="2" placeholder="Add additional remarks..."></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="appController.closeAddModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Save & Update Wallet Balance</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: INTER-WALLET TRANSFER -->
+  <div id="transferModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fas fa-exchange-alt"></i> Transfer Money Between Wallets</h3>
+        <button class="close-btn" onclick="appController.closeTransferModal()"><i class="fas fa-times"></i></button>
+      </div>
+
+      <form onsubmit="appController.handleSaveTransfer(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Transfer From (কোথা থেকে)</label>
+            <select id="transferFromWallet" required>
+              <option value="bank">Bank (ব্যাংক)</option>
+              <option value="bkash">bKash (বিকাশ)</option>
+              <option value="nagad">Nagad (নগদ)</option>
+              <option value="cash">Cash (ক্যাশ)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Transfer To (কোথায় পাঠাবেন)</label>
+            <select id="transferToWallet" required>
+              <option value="cash">Cash in Hand (ক্যাশ)</option>
+              <option value="bkash">bKash (বিকাশ)</option>
+              <option value="nagad">Nagad (নগদ)</option>
+              <option value="bank">Bank (ব্যাংক)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Transfer Amount (টাকার পরিমাণ)</label>
+          <input type="number" id="transferAmount" placeholder="e.g. 1000" step="0.01" required>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="appController.closeTransferModal()">Cancel</button>
+          <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> Execute Transfer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: INVITE GUARDIAN / OBSERVER -->
+  <div id="inviteModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fas fa-user-plus"></i> Invite Reference Observer</h3>
+        <button class="close-btn" onclick="shareManager.closeInviteModal()"><i class="fas fa-times"></i></button>
+      </div>
+
+      <form onsubmit="shareManager.handleCreateInvite(event)">
+        <div class="form-group">
+          <label>Guardian / Observer Name</label>
+          <input type="text" id="inviteName" placeholder="e.g. Father, Mother, Sponsor..." required>
+        </div>
+
+        <div class="form-group">
+          <label>Guardian Email Address</label>
+          <input type="email" id="inviteEmail" placeholder="guardian@example.com" required>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="shareManager.closeInviteModal()">Cancel</button>
+          <button type="submit" class="btn btn-success"><i class="fas fa-paper-plane"></i> Send Access Invitation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notifications Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- JavaScript Files -->
+  <script src="js/data.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/share.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
